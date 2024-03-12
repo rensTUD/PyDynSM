@@ -17,6 +17,7 @@ import pydynsm as PDM
 Node = PDM.Node
 Constrainer = PDM.Constrainer
 Element = PDM.Element
+Assembler = PDM.Assembler
 
 # %% Example
 
@@ -43,15 +44,15 @@ node2 = Node(L,0)
 
 # initialise element
 elem = Element ( [node1, node2] )
-
+ 
 # %%% trial setting elements
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
+
 # %%% set boundary conditions
 
 con = Constrainer()
-
 # TRY HERE DIFFERENT BOUNDARY CONDITIONS AND CHECK WITH MAPLE FILE FOR CORRECTNESS OF RESULTS:
 
 con.fix_dof (node1,0)
@@ -64,5 +65,15 @@ con.fix_dof (node2,1)
 # %%% Add distributed load
 elem.AddDistributedLoad([q_r,q_b,0], omega)
 
+# %%% initialise assembler which will also hold the constrainer class
+
+assembler = Assembler()
+
+# %%% add elements to assembler
+
+assembler.AddElements(elem)
+
 # %%%
+
+
 
