@@ -30,3 +30,9 @@ class Constrainer:
             kc[dof,dof]           = 1.0
 
         return kc, fc
+
+    def support_reactions (self,k,u_free,f):       
+        Kcf = k[np.ix_(self.cons_dofs,self.free_dofs)]
+        Kcc = k[np.ix_(self.cons_dofs,self.cons_dofs)]
+        
+        return np.matmul(Kcf,u_free) + np.matmul(Kcc,self.cons_vals) - f[self.cons_dofs]
