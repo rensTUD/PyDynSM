@@ -45,20 +45,29 @@ class LocalElement():
         # initialise 6x6 empty complex matrix
         K_full = np.zeros((6,6), complex)
         
+        # calculate local stiffness matrix
+        K_local = self.LocalStiffness(omega)
+        
         # assign to correct locations in full matrix
         for i, row in enumerate(self.dofs):
             for j, col in enumerate(self.dofs):
-                K_full[row, col] = self.LocalStiffness(omega)[i, j]
+                K_full[row, col] = K_local[i, j]
+                
+        return K_full 
     
     def FullDistributedLoad(self, q, omega):
         
         # initialise 6x1 empty complex vector 
         q_full = np.zeros(6,complex)
         
+        # calculate local load vector
+        q_local = self.LocalDistributedLoad(q, omega)
+        
         # assign to correct locations in full vector
         for i, row in enumerate(self.dofs):
-            q_full[row] = self.LocalDistributedLoad(q, omega)
+            q_full[row] = q_local[i]
         
+        return q_full
 
 # %% specific local element classes
 

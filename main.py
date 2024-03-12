@@ -46,6 +46,7 @@ elem = Element ( [node1, node2] )
 
 # %%% trial setting elements
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
+elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%% set boundary conditions
 
@@ -60,7 +61,8 @@ con.fix_dof (node2,0)
 con.fix_dof (node2,1)
 #con.fix_dof (node2,2)
 
-elem.add_distributed_load([q_r,q_b])
+# %%% Add distributed load
+elem.AddDistributedLoad([q_r,q_b,0], omega)
 
 # %%%
 

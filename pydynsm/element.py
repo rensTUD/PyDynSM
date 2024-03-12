@@ -58,17 +58,20 @@ class Element:
         # add L to props
         props['L'] = self.L
         
-        # check for element and accordingly assign the properties 
-        if element_type == 'Rod':
-            # unpack props
-            element = Rod_1D(**props)
-        elif element_type == 'EB_Beam':
-            element = self.EB_Beam(**props)
-    
-        # store the element
-        self.element_types[element_type] = element    
+        try:
+            # check for element and accordingly assign the properties 
+            if element_type == 'Rod':
+                # unpack props
+                element = Rod_1D(**props)
+            elif element_type == 'EB Beam':
+                element = self.EB_Beam(**props)
         
-        print(f'')
+            # store the element
+            self.element_types[element_type] = element    
+        except Exception as e:
+            print(f'Exception occurred - {e}')
+        else:
+            print(f'Successfully added element of type: {element_type}')
     
     def RemoveSection(self,element_type):
         '''
@@ -99,7 +102,7 @@ class Element:
                 
         return k_glob
 
-    def DistributedLoad(self, q, omega):
+    def AddDistributedLoad(self, q, omega):
         '''
         function to add distributed load to the element. 
         
@@ -113,9 +116,9 @@ class Element:
         for i, q_el in enumerate(q):
             if q_el != 0:
                 if i == 0:
-                    q_loc += self.element_types['Rod'].FullDistributedLoad(q, omega)
+                    q_loc += self.element_types['Rod'].FullDistributedLoad(q_el, omega)
                 elif i == 1:                    
-                    q_loc += self.element_types['EB_Beam'].FullDistributedLoad(q, omega)
+                    q_loc += self.element_types['EB Beam'].FullDistributedLoad(q_el, omega)
         
         # get global element load
         q_glob = np.matmul(self.Rt, q_loc)

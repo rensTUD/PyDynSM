@@ -55,7 +55,7 @@ class Node:
 
         self.x     = x
         self.z     = z
-        self.p     = np.zeros(3)
+        self.p     = np.zeros(3,complex)
 
         self.dofs  = [Node.ndof, Node.ndof+1, Node.ndof+2]
 
