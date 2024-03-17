@@ -9,11 +9,11 @@ from .elements import EB_Beam
 # %% class definition
 class Element:
     ne = 0
-
+    
     def clear():
         Element.ne = 0
         
-    def __init__ (self, nodes, Rod_1D=Rod_1D, EB_Beam=EB_Beam):
+    def __init__ (self, nodes, assembler=None, Rod_1D=Rod_1D, EB_Beam=EB_Beam):
         
         # assign element classes through dependency injection 
         self.Rod_1D = Rod_1D
@@ -39,6 +39,7 @@ class Element:
         R[1,0] = R[4,3] =  self.sin
         R[2,2] = R[5,5] = 1.0
         
+        # set rotation matrices
         self.R  = R
         self.Rt = np.transpose(R)
         
@@ -47,13 +48,17 @@ class Element:
         
         # Keep track of what kind of elements are included in the form of a dictionary to be able to use them later
         self.element_types = {}
+        
+        # add element to the assembler
+        if assembler is not None:
+            assembler.RegisterElement(self)
 
     def SetSection (self, element_type, props):
         '''
         This function serves to set the elements, we will have to think how we do this properly but this is an initial set-up
         
         '''
-        # TODO - need to handle errors correctly when not the correct parameters are given: think of creating a parent element class on which EB_Beam and Rod and others are based
+        # TODO - need to handle errors correctly when not the correct parameters are given
         
         # add L to props
         props['L'] = self.L

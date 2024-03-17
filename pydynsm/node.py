@@ -29,8 +29,14 @@ class Node:
         get_coords(): Returns the coordinates of the node.
         __str__(): Returns a string representation of the node.
     """
+    
+    # determine class variables shared through all instances of the Node class
     ndof = 0
     nn   = 0
+    fixed_dofs_global = []
+    
+    # mapping of dofs
+    dof_map = {'x': 0, 'z': 1, 'phi': 2}
     
     def clear():
         """
@@ -41,8 +47,9 @@ class Node:
         """
         Node.ndof = 0
         Node.nn = 0
+        Node.fixed_dofs_global.clear()
         
-    def __init__ (self, x, z): 
+    def __init__(self, x, z, assembler=None, x_fixed=False, z_fixed=False, phi_fixed=False): 
         """
         The constructor for Node class.
 
@@ -59,10 +66,23 @@ class Node:
 
         self.dofs  = [Node.ndof, Node.ndof+1, Node.ndof+2]
 
+        self.fixed_dofs = []        
+        
+        if x_fixed:
+            self.fix_dof('x')
+        if z_fixed:
+            self.fix_dof('z')
+        if phi_fixed:
+            self.fix_dof('phi')
+        
         Node.ndof += 3
         Node.nn   += 1
+        
+        # add the node to the assembler
+        if assembler is not None:
+            assembler.RegisterNode(self)
 
-    def add_load (self, p):
+    def add_load(self, p):
         """
         Adds the given loads to the node.
 
@@ -83,6 +103,35 @@ class Node:
            numpy.array: An array containing the x and z coordinates of the node.
         """
         return np.array([self.x, self.z])
+    
+    
+    def fix_dof(self, *dofs):
+        """
+        Instance method to fix a specific degree of freedom for this node.
+
+        Parameters:
+        dof (str): The identifier of the degree of freedom to be fixed ('x', 'z', or 'phi').
+        """
+        
+        for dof in dofs:
+            if dof in Node.dof_map:
+                dof_index = self.dofs[Node.dof_map[dof]]
+                if dof_index not in Node.fixed_dofs_global:
+                    # add to class global fixed dofs list
+                    Node.fixed_dofs_global.append(dof_index)
+                    # add to itself (probably not necessary)
+                    self.fixed_dofs.append(dof)
+                    print(f"DOF {dof} for node at ({self.x}, {self.z}) is now fixed.")
+                else:
+                    print(f"DOF {dof} for node at ({self.x}, {self.z}) is already fixed.")
+            else:
+                raise ValueError("Invalid DOF. Please use 'x', 'z', or 'phi'.")
+        
+    def fix_node(self):
+        """
+        Constrain all degrees of freedom for this node.
+        """
+        self.fix_dof('x', 'z', 'phi')
 
     def __str__(self):
         """

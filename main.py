@@ -21,6 +21,10 @@ Assembler = PDM.Assembler
 
 # %% Example
 
+# %%% Initialise an assembler with your project name
+
+s1 = Assembler('beam')
+
 # %%% Parameters
 EA = 7e6
 EI = 1.5 * 7e06 # MODIFIED
@@ -37,13 +41,13 @@ Element.clear()
 
 # %%% Create nodes
 
-node1 = Node(0,0)
-node2 = Node(L,0)
+node1 = Node(0,0,s1)
+node2 = Node(L,0,s1)
 
 # %%% Create element
 
 # initialise element
-elem = Element ( [node1, node2] )
+elem = Element ( [node1, node2] , s1)
  
 # %%% trial setting elements
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
@@ -52,26 +56,14 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%% set boundary conditions
 
-con = Constrainer()
-# TRY HERE DIFFERENT BOUNDARY CONDITIONS AND CHECK WITH MAPLE FILE FOR CORRECTNESS OF RESULTS:
 
-con.fix_dof (node1,0)
-con.fix_dof (node1,1)
-#con.fix_dof (node1,2)
-con.fix_dof (node2,0)
-con.fix_dof (node2,1)
-#con.fix_dof (node2,2)
+# %%% Now set it directly on the nodes
+node1.fix_dof('x', 'z')
+node2.fix_dof('x', 'z')
 
 # %%% Add distributed load
 elem.AddDistributedLoad([q_r,q_b,0], omega)
 
-# %%% initialise assembler which will also hold the constrainer class
-
-assembler = Assembler()
-
-# %%% add elements to assembler
-
-assembler.AddElements(elem)
 
 # %%%
 

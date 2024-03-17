@@ -8,31 +8,50 @@ Created on Tue Mar 12 19:21:45 2024
 # %% import dependencies
 import numpy as np
 
-from .constrainer import Constrainer
 
 # %% main class definition
 
 class Assembler:
     
-    def __init__(self):
+    def __init__(self, name):
         '''
         Initialisation of assembler
         '''
-        
-        # # initialise dependencies
-        # self.Constrainer = Constrainer()
-        
+                        
         # initialise empty elements list
         self.elements = []
-    
-    def AddElements(self, elements):
-        '''
-        Function that adds element(s) to itself
-        '''
         
-        # check if input is a list or not
-        if not isinstance(elements,list):
-            elements = [elements]
+        # empty nodes list
+        self.nodes = []
+        
+        # assembler / project name
+        self.name = name
+        
+        print(f"Assembler '{self.name}' successfully initialised")
+        
+    def RegisterNode(self, node):
+        if node not in self.nodes:
+            self.nodes.append(node)
+
+    def RegisterElement(self, element):
+        if element not in self.elements:
+            self.elements.append(element)
+    
+    # TODO
+    def SaveAssembler(self):
+       '''
+       Function to be built that can save the current structure you are working on
+       '''
+       pass
+    
+    # TODO
+    @classmethod
+    def LoadAssembler(cls):
+        '''
+        Class method that will load a specific saved assembler / project to quickly continue with it
+        '''
+        pass
+    
+        
             
-        self.elements.extend(elements)
         
