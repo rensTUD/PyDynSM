@@ -78,6 +78,9 @@ class Node:
         Node.ndof += 3
         Node.nn   += 1
         
+        # node name
+        self.name = f"Node {Node.nn}"
+        
         # add the node to the assembler
         if assembler is not None:
             assembler.RegisterNode(self)

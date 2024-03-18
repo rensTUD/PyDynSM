@@ -44,6 +44,10 @@ Element.clear()
 node1 = Node(0,0,s1)
 node2 = Node(L,0,s1)
 
+# %%%% Plot nodes
+
+s1.PlotNodes()
+
 # %%% Create element
 
 # initialise element
@@ -53,6 +57,9 @@ elem = Element ( [node1, node2] , s1)
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
+# %%%% plot elements too
+
+s1.PlotNodes(plot_elements=True)
 
 # %%% set boundary conditions
 
