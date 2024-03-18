@@ -44,9 +44,14 @@ Element.clear()
 node1 = Node(0,0,s1)
 node2 = Node(L,0,s1)
 
+# %%% Now set it directly on the nodes
+node1.fix_dof('x', 'z')
+node2.fix_dof('x', 'z')
+
+
 # %%%% Plot nodes
 
-s1.PlotNodes()
+s1.PlotStructure()
 
 # %%% Create element
 
@@ -59,14 +64,11 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%%% plot elements too
 
-s1.PlotNodes(plot_elements=True)
+s1.PlotStructure(plot_elements=True)
 
 # %%% set boundary conditions
 
 
-# %%% Now set it directly on the nodes
-node1.fix_dof('x', 'z')
-node2.fix_dof('x', 'z')
 
 # %%% Add distributed load
 elem.AddDistributedLoad([q_r,q_b,0], omega)

@@ -7,5 +7,10 @@ from .constrainer import Constrainer
 from .element import Element
 from .assembler import Assembler
 
-# %% import also module elements
-from . import elements
+
+# %% import modules
+
+from . import elements # elements module
+
+from . import plotter # plotting module
+

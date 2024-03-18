@@ -46,6 +46,8 @@ class Element:
         # increase element number total
         Element.ne += 1
         
+        self.name = f"Element {Element.ne}"
+        
         # Keep track of what kind of elements are included in the form of a dictionary to be able to use them later
         self.element_types = {}
         
@@ -118,12 +120,19 @@ class Element:
         
         q_loc = np.zeros(6, complex)
         
-        for i, q_el in enumerate(q):
-            if q_el != 0:
-                if i == 0:
-                    q_loc += self.element_types['Rod'].FullDistributedLoad(q_el, omega)
-                elif i == 1:                    
-                    q_loc += self.element_types['EB Beam'].FullDistributedLoad(q_el, omega)
+        # TODO - check if this new loop works properly
+        
+        for i, element_type in enumerate(self.element_types):
+            if q[i] != 0:  # Only proceed if there's a non-zero distributed load for this element type
+                # Directly apply the distributed load without redundant checks
+                q_loc += self.element_types[element_type].FullDistributedLoad(q[i], omega)
+        
+        # for i, q_el in enumerate(q):
+        #     if q_el != 0:
+        #         if i == 0:
+        #             q_loc += self.element_types['Rod'].FullDistributedLoad(q_el, omega)
+        #         elif i == 1:                    
+        #             q_loc += self.element_types['EB Beam'].FullDistributedLoad(q_el, omega)
         
         # get global element load
         q_glob = np.matmul(self.Rt, q_loc)

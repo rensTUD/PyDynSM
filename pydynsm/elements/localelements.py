@@ -68,6 +68,20 @@ class LocalElement():
             q_full[row] = q_local[i]
         
         return q_full
+    
+    def FullDisplacement(self, u_node, omega):
+        
+        # initialise 6x1 empty complex vector 
+        u_full = np.zeros(6,complex)
+        
+        # calculate local load vector
+        u_local = self.LocalDisplacements(u_node, omega)
+        
+        # assign to correct locations in full vector
+        for i, row in enumerate(self.dofs):
+            u_full[row] = u_local[i]
+        
+        return u_full
 
 # %% specific local element classes
 
@@ -136,7 +150,35 @@ class EB_Beam(LocalElement):
                         [q*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0))] 
                         ])
         
-        return el    
+        return el  
+    
+    def LocalDisplacements(self, q_nodes_global, u_nodes_global, omega, num_points = 50):
+        '''
+        function that calculates the local displacements
+        '''
+        # TODO - check how to do this properly...
+        
+        ksi = self.ksi # MODIFIED
+        rhoA = self.rhoA  # MODIFIED 
+        EI = self.EI * (1 + 2j * ksi) # MODIFIED
+        L = self.L
+        omega = self.omega  # MODIFIED
+        beta_b = (omega**2 * rhoA / EI) ** 0.25  # MODIFIED
+        q = self.q[1]
+
+        x = np.linspace ( 0.0, L, num_points )
+        
+
+        ul = np.matmul ( self.R, u_nodes_global )
+        
+        ul = np.concatenate((ul[1:3],ul[4:]))
+        
+        A = np.array([[(np.sin(beta_b * L) * np.sinh(beta_b * L) + np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(np.cos(beta_b * L) * np.sinh(beta_b * L) - np.sin(beta_b * L) * np.cosh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2,(np.cos(beta_b * L) - np.cosh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(np.sin(beta_b * L) - np.sinh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2],[(-np.cos(beta_b * L) * np.sinh(beta_b * L) - np.sin(beta_b * L) * np.cosh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(1 + np.sin(beta_b * L) * np.sinh(beta_b * L) - np.cos(beta_b * L) * np.cosh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2,(np.sin(beta_b * L) + np.sinh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(-np.cos(beta_b * L) + np.cosh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2],[(np.sin(beta_b * L) * np.cosh(beta_b * L) + np.cos(beta_b * L) * np.sinh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(-np.cos(beta_b * L) * np.cosh(beta_b * L) - np.sin(beta_b * L) * np.sinh(beta_b * L) + 1) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2,(-np.sin(beta_b * L) - np.sinh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(np.cos(beta_b * L) - np.cosh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2],[(np.cos(beta_b * L) * np.cosh(beta_b * L) - np.sin(beta_b * L) * np.sinh(beta_b * L) - 1) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(np.sin(beta_b * L) * np.cosh(beta_b * L) - np.cos(beta_b * L) * np.sinh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2,(-np.cos(beta_b * L) + np.cosh(beta_b * L)) / (2 * np.cos(beta_b * L) * np.cosh(beta_b * L) - 2),(-np.sin(beta_b * L) + np.sinh(beta_b * L)) / beta_b / (np.cos(beta_b * L) * np.cosh(beta_b * L) - 1) / 2]])
+        
+        C = A @ (ul + np.array([1/(EI*beta_b**4),0,1/(EI*beta_b**4),0]) * q)
+        
+        w = C[3] * np.cos(beta_b * x) + C[2] * np.sin(beta_b * x) + C[0] * np.cosh(beta_b * x) + C[1] * np.sinh(beta_b * x) - q / EI / beta_b**4
+        pass
     
 class Rod_1D(LocalElement):
             
