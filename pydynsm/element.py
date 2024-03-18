@@ -141,7 +141,10 @@ class Element:
         # assign to nodes
         self.nodes[0].add_load( q_glob[0:3] )
         self.nodes[1].add_load( q_glob[3:6] )
-        
+    
+    def Displacements(self, u_global, num_points = 2):
+        pass
+    
     def displacements ( self, u_global, num_points=2 ):
         
         ksi = self.ksi # MODIFIED
