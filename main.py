@@ -45,13 +45,13 @@ node1 = Node(0,0,s1)
 node2 = Node(L,0,s1)
 
 # %%% Now set it directly on the nodes
-node1.fix_dof('x', 'z')
-node2.fix_dof('x', 'z')
+node1.fix_dofs('x', 'z')
+node2.fix_dofs('x', 'z')
 
 
 # %%%% Plot nodes
 
-s1.PlotStructure()
+# s1.PlotStructure()
 
 # %%% Create element
 
@@ -64,7 +64,7 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%%% plot elements too
 
-s1.PlotStructure(plot_elements=True)
+# s1.PlotStructure(plot_elements=True)
 
 # %%% set boundary conditions
 
@@ -74,7 +74,41 @@ s1.PlotStructure(plot_elements=True)
 elem.AddDistributedLoad([q_r,q_b,0], omega)
 
 
+# %%% get the global constrained stiffness and force
+
+global_kc = s1.GlobalConstrainedStiffness(omega)
+global_fc = s1.GlobalConstrainedForce(omega)
+
+# %%% solve as well for u_free
+u_free = s1.SolveUfree(global_kc, global_fc)
+
+# %%% and for the support reactions
+
+f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
+
+# %%%%
+# TODO: IMPORTANT: RESULTS ARE SLIGHTLY OFF FROM THE NOTEBOOK 3.3 (SHOULD INVESTIGATE)
+
+# %%%%
+print(f'Solution of u_free = \n{u_free}\n')
+
+# %%%%
+print(f'Global constrained stiffness matrix = \n{global_kc}\n')
+
+# %%%%
+
+print(f'Global constrained force vector = \n{global_fc}\n')
+
+# %%%%
+
+print(f'Global support reactions = \n{f_supp}\n')
+
+# %%% check global dofs 
+
+elem.GlobalDofs()
+
 # %%%
 
-
+u_elem = s1.FullDisplacement(u_free)
+print(f'u_elem = \n{u_elem}\n')
 

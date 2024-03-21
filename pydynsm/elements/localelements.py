@@ -169,7 +169,7 @@ class EB_Beam(LocalElement):
         x = np.linspace ( 0.0, L, num_points )
         
 
-        ul = np.matmul ( self.R, u_nodes_global )
+        ul = self.R @ u_nodes_global
         
         ul = np.concatenate((ul[1:3],ul[4:]))
         

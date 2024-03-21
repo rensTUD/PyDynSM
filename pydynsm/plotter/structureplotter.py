@@ -14,9 +14,9 @@ class StructurePlotter:
     def PlotNodes(self, nodes):
         plt.figure(figsize=(10, 6))
         for node in nodes:
-            marker = 'o' if len(node.fixed_dofs) == 0 else '^'
-            color = 'blue' if len(node.fixed_dofs) == 0 else 'red'
-            plt.scatter(node.x, node.z, color=color, marker=marker, label=f'{"Free" if len(node.fixed_dofs) == 0 else "Fixed"} Node' if f'{"Free" if len(node.fixed_dofs) == 0 else "Fixed"} Node' not in plt.gca().get_legend_handles_labels()[1] else "")
+            marker = 'o' if len(node.constrained_dofs) == 0 else '^'
+            color = 'blue' if len(node.constrained_dofs) == 0 else 'red'
+            plt.scatter(node.x, node.z, color=color, marker=marker, label=f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' if f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' not in plt.gca().get_legend_handles_labels()[1] else "")
             plt.text(node.x, node.z, f'{node.name}', fontsize=9, ha='right')
 
     def PlotElements(self, elements):

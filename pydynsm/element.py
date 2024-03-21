@@ -105,7 +105,7 @@ class Element:
             k_loc += element.FullStiffness(omega)
         
         # return the full global stiffness matrix
-        k_glob = np.matmul ( np.matmul ( self.Rt, k_loc ), self.R )
+        k_glob = ( self.Rt @ k_loc ) @ self.R 
                 
         return k_glob
 
@@ -135,7 +135,7 @@ class Element:
         #             q_loc += self.element_types['EB Beam'].FullDistributedLoad(q_el, omega)
         
         # get global element load
-        q_glob = np.matmul(self.Rt, q_loc)
+        q_glob = self.Rt @ q_loc
         
         # TODO - think of changing the code such that we get a clear separation between omega. Thus that we can create a loop that will define all variables per omega. Would be useful
         # assign to nodes
@@ -423,7 +423,7 @@ class Element_old:
         
        # #el = [ 0.5*q[0]*l, 0.5*q[1]*l, -1.0/12.0*q[1]*l*l, 0.5*q[0]*l, 0.5*q[1]*l, 1.0/12.0*q[1]*l*l ]
     
-        eg = np.matmul ( self.Rt, el)
+        eg =  self.Rt @ el
 
         self.nodes[0].add_load ( eg[0:3] )
         self.nodes[1].add_load ( eg[3:6] )
