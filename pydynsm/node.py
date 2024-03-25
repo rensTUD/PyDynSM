@@ -38,7 +38,7 @@ class Node:
     # mapping of dofs
     dof_map = {'x': 0, 'z': 1, 'phi': 2}
     
-    def clear():
+    def Clear():
         """
         Clears the counting of degrees of freedom and number of nodes.
 
@@ -65,7 +65,7 @@ class Node:
         self.z     = z
         
         # initialise empty forces lists
-        self.p     = np.zeros(3,complex)
+        self.nodal_forces     = []
         
         # numbers of dofs [x,z,phi]
         self.dofs  = [Node.ndof, Node.ndof+1, Node.ndof+2]
@@ -76,11 +76,11 @@ class Node:
         
         # check whether node is being initialised with some fixation
         if x_fixed:
-            self.fix_dof('x')
+            self.FixDof('x')
         if z_fixed:
-            self.fix_dof('z')
+            self.FixDof('z')
         if phi_fixed:
-            self.fix_dof('phi')
+            self.FixDof('phi')
         
         # increment the class variables
         Node.ndof += 3
@@ -93,7 +93,7 @@ class Node:
         if assembler is not None:
             assembler.RegisterNode(self)
 
-    def add_load(self, p):
+    def AddLoad(self, p):
         """
         Adds the given loads to the node.
 
@@ -104,9 +104,9 @@ class Node:
             p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
                              and the moment. 
         """
-        self.p += p
+        self.nodal_forces.append(p)
 
-    def get_coords(self):
+    def GetCoords(self):
         """
         Returns the coordinates of the node.
 
@@ -115,7 +115,7 @@ class Node:
         """
         return np.array([self.x, self.z])
     
-    def fix_dofs(self, *args):
+    def FixDofs(self, *args):
         """
         Fixes specific degrees of freedom for this node, with given values or default.
     
@@ -127,14 +127,14 @@ class Node:
             if isinstance(arg, str):  # Single DOF with default value
                 dof = arg
                 value = 0  # Default value
-                self.fix_dof(dof, value)
+                self.FixDof(dof, value)
             elif isinstance(arg, list) and len(arg) == 2:
                 dof, value = arg
-                self.fix_dof(dof, value)
+                self.FixDof(dof, value)
             else:
                 raise ValueError("Invalid argument format. Use 'dof' or ('dof', value).")
     
-    def fix_dof(self, dof, value):
+    def FixDof(self, dof, value):
         """
         Helper method to fix a single degree of freedom with a given value.
     
@@ -153,11 +153,11 @@ class Node:
         else:
             raise ValueError(f"Invalid DOF '{dof}'. Please use 'x', 'z', or 'phi'.")
 
-    def fix_node(self):
+    def FixNode(self):
         """
         Constrain all degrees of freedom for this node.
         """
-        self.fix_dofs('x', 'z', 'phi')
+        self.FixDofs('x', 'z', 'phi')
 
     def __str__(self):
         """
@@ -166,4 +166,7 @@ class Node:
         Returns:
             str: A string representation of the node.
         """
+        
+        # TODO - UPDATE WHAT IT SHOULD RETURN
+        
         return f"This node has:\n - x coordinate={self.x},\n - z coordinate={self.z},\n - degrees of freedom={self.dofs},\n - load vector={self.p})"

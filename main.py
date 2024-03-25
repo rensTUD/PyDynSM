@@ -44,10 +44,19 @@ Element.clear()
 node1 = Node(0,0,s1)
 node2 = Node(L,0,s1)
 
-# %%% Now set it directly on the nodes
-node1.fix_dofs('x', 'z')
-node2.fix_dofs('x', 'z')
+# %%% Now set the constraints directly onto the nodes
+node1.FixDofs('x', 'z')
+node2.FixDofs('z')
 
+# %%%% test adding a load to the node
+
+# define a lambda function running over omega for p_x
+omega_f = 10
+p_x = lambda omega: 1 if omega == omega_f else 0
+
+# add load to node2
+
+node1.AddLoad([p_x, 0, 0])
 
 # %%%% Plot nodes
 

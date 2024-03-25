@@ -175,6 +175,9 @@ class EB_Beam(StructuralElement):
         '''
         add a distributed load to the local element
         
+        q = [q_z;
+             q_phi]
+        
         '''
         
         # assign load to itself to keep track

@@ -10,6 +10,9 @@ from .elements import EB_Beam
 class Element:
     ne = 0
     
+    # degrees of freedom [x, z, phi]
+    Ndof = 3
+    
     def clear():
         Element.ne = 0
         
@@ -50,6 +53,9 @@ class Element:
         
         # Keep track of what kind of elements are included in the form of a dictionary to be able to use them later
         self.element_types = {}
+        
+        # initialise empty list with nodal forces due to element loads
+        self.element_nodal_loads = []
         
         # add element to the assembler
         if assembler is not None:
@@ -109,32 +115,63 @@ class Element:
                 
         return k_glob
 
-    def AddDistributedLoad(self, q, omega):
+    def AddDistributedLoad(self, q):
         '''
         function to add distributed load to the element. 
         
-        q = [q_rod;
-             q_EB_V;
-             q_EB_M;]
+        q = [q_x;
+             q_z;
+             q_phi;]
+        
+        input should be lambda functions depending on omega or 0
         '''
         
-        q_loc = np.zeros(6, complex)
+        # TODO - THIS OVERWRITES THE OTHER TODOS: FOR NOW JUST ASSIGN THE LOADS HERE. HAVE ANOTHER FUNCTION EVALUATE THEM
         
-        # TODO - this loop is not fully correct, should fix this (it works if we assign a rod and euler bernoulli beam...)
+        # q_loc = np.zeros(2*Element.Ndof, complex)
         
-        for i, element_type in enumerate(self.element_types):
-            if q[i] != 0:  # Only proceed if there's a non-zero distributed load for this element type
-                # Directly apply the distributed load without redundant checks
-                q_loc += self.element_types[element_type].FullDistributedLoad(q[i], omega)
+        # # TODO - this loop is not fully correct, should fix this (it works if we assign a rod and euler bernoulli beam...)
+        
+        # for i, element_type in enumerate(self.element_types):
+        #     # get dofs of specific element type
+        #     dofs = element_type.dofs
+            
+        #     # pass through the loads that are specific for that element
+        #     q_loc += self.element_types[element_type].FullDistributedLoad(q[dofs])
+        
+        # # for i, element_type in enumerate(self.element_types):
+        # #     if q[i] != 0:  # Only proceed if there's a non-zero distributed load for this element type
+        # #         # Directly apply the distributed load without redundant checks
+        # #         q_loc += self.element_types[element_type].FullDistributedLoad(q[i], omega)
     
         
-        # get global element load
-        q_glob = self.Rt @ q_loc
+        # # get global element load
+        # q_glob = self.Rt @ q_loc
         
         # TODO - think of changing the code such that we get a clear separation between omega. Thus that we can create a loop that will define all variables per omega. Would be useful
         # assign to nodes
-        self.nodes[0].add_load( q_glob[0:3] )
-        self.nodes[1].add_load( q_glob[3:6] )
+        
+        # for now
+        self.element_nodal_loads.append(q)
+    
+    def EvaluateDistributedLoad(self, q, omega):
+        '''
+        Evaluates the distributed load
+        '''
+        q_loc = np.zeros(2*Element.Ndof, complex)
+        
+        q_evaluated = np.array([load(omega) if callable(load) else load for load in q])
+        
+        for i, element_type in enumerate(self.element_types):
+            # get dofs of specific element type
+            dofs = element_type.dofs
+            
+            # pass through the loads that are specific for that element
+            q_loc += self.element_types[element_type].FullDistributedLoad(q_evaluated[dofs], omega)
+        
+        q_glob = self.Rt @ q_loc
+        
+        return q_glob
     
     def Displacements(self, u_nodes_global, omega, num_points = 2):
         '''
@@ -151,10 +188,8 @@ class Element:
             - phi(s) = rotation
         '''
         
-        Ndof = 3 # temporarily leave this here..
-        
         # intialise empty list with size Ndof to hold the local displacements of the elemnent
-        u_elem = [None] * Ndof
+        u_elem = [None] * Element.Ndof
         
         
         # loop over all element types

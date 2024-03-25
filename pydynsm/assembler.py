@@ -90,10 +90,38 @@ class Assembler:
         
         # TODO: should be replaced with the matrix multiplication as in the paper Thanasis found!
         '''
+        # initialise global force vector
         f_global = np.zeros(Assembler.Ndofs*len(self.nodes),complex)
         
+        # load all forces of the elements
+        for element in self.elements:
+            # check if any loads are present in the element, if not continue
+            if not element.element_nodal_loads:
+                continue
+        
+            # get dofs of element nodes
+            left_dofs = element.nodes[0].dofs
+            right_dofs = element.nodes[1].dofs
+            dofs = np.hstack([left_dofs,right_dofs])
+            # assign every global force to the global force vector
+            for element_nodal_load in element.element_nodal_loads:
+                # evaluate the load
+                f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(self, element_nodal_load, omega)
+        
+        
+        # load all forces on the nodes 
         for n in self.nodes:
-            f_global[n.dofs] += n.p
+            # check if any loads are present in the node, if not continue
+            if not n.nodal_forces:
+                continue
+            
+            # loop over all present forces
+            for nodal_force in n.nodal_forces:
+                # Process each component of the nodal force, checking if it's a lambda or a constant
+                force_components = np.array([(force(omega) if callable(force) else force) for force in nodal_force])
+                
+                # Add the evaluated force components to the global force vector at positions specified by n.dofs
+                f_global[n.dofs] += force_components
             
         return f_global
     
