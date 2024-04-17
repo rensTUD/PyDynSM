@@ -13,7 +13,7 @@ class Element:
     # degrees of freedom [x, z, phi]
     Ndof = 3
     
-    def clear():
+    def Clear():
         Element.ne = 0
         
     def __init__ (self, nodes, assembler=None, Rod_1D=Rod_1D, EB_Beam=EB_Beam):
@@ -128,46 +128,25 @@ class Element:
         
         # TODO - THIS OVERWRITES THE OTHER TODOS: FOR NOW JUST ASSIGN THE LOADS HERE. HAVE ANOTHER FUNCTION EVALUATE THEM
         
-        # q_loc = np.zeros(2*Element.Ndof, complex)
-        
-        # # TODO - this loop is not fully correct, should fix this (it works if we assign a rod and euler bernoulli beam...)
-        
-        # for i, element_type in enumerate(self.element_types):
-        #     # get dofs of specific element type
-        #     dofs = element_type.dofs
-            
-        #     # pass through the loads that are specific for that element
-        #     q_loc += self.element_types[element_type].FullDistributedLoad(q[dofs])
-        
-        # # for i, element_type in enumerate(self.element_types):
-        # #     if q[i] != 0:  # Only proceed if there's a non-zero distributed load for this element type
-        # #         # Directly apply the distributed load without redundant checks
-        # #         q_loc += self.element_types[element_type].FullDistributedLoad(q[i], omega)
     
-        
-        # # get global element load
-        # q_glob = self.Rt @ q_loc
-        
-        # TODO - think of changing the code such that we get a clear separation between omega. Thus that we can create a loop that will define all variables per omega. Would be useful
-        # assign to nodes
-        
-        # for now
         self.element_nodal_loads.append(q)
     
     def EvaluateDistributedLoad(self, q, omega):
         '''
         Evaluates the distributed load
         '''
+        # initialise local nodal load
         q_loc = np.zeros(2*Element.Ndof, complex)
         
+        # evaluate, if necessary, the nodal loads and put in array
         q_evaluated = np.array([load(omega) if callable(load) else load for load in q])
         
-        for i, element_type in enumerate(self.element_types):
+        for i, element_type in self.element_types.items():
             # get dofs of specific element type
             dofs = element_type.dofs
             
             # pass through the loads that are specific for that element
-            q_loc += self.element_types[element_type].FullDistributedLoad(q_evaluated[dofs], omega)
+            q_loc += element_type.FullDistributedLoad(q_evaluated[dofs], omega)
         
         q_glob = self.Rt @ q_loc
         

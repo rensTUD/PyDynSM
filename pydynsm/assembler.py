@@ -106,7 +106,7 @@ class Assembler:
             # assign every global force to the global force vector
             for element_nodal_load in element.element_nodal_loads:
                 # evaluate the load
-                f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(self, element_nodal_load, omega)
+                f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element_nodal_load, omega)
         
         
         # load all forces on the nodes 

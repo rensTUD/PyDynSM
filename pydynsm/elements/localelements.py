@@ -189,12 +189,16 @@ class EB_Beam(StructuralElement):
         # determine wavenumber
         beta_b = self.beta_b(omega)
         
+        # extract loads
+        q_z = q[0]
+        q_phi = q[1]
         
-        el = np.array([ [q*((np.cos(beta_b*L) - 1.0)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0))],
-                        [-q*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0))],
-                        [q*((np.cos(beta_b*L) - 1)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0))], 
-                        [q*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0))] 
-                        ])
+        # TODO - check for correctness
+        el = [ q_z*((np.cos(beta_b*L) - 1.0)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
+                        -q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
+                        q_z*((np.cos(beta_b*L) - 1)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)), 
+                        q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)) 
+                        ]
         
         return el  
     
@@ -221,7 +225,7 @@ class EB_Beam(StructuralElement):
         w = self.displacement(x,omega,C)
         
         # get rotations
-        phi= self.rotation(x,omega,C)
+        phi = self.rotation(x,omega,C)
         
         return [w, phi]
     
@@ -357,9 +361,7 @@ class Rod_1D(StructuralElement):
         beta_r = self.beta_r(omega)
         
         
-        el = np.array([ [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)], 
-                        [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)] 
-                        ])
+        el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
         
         return el
 

@@ -36,10 +36,10 @@ omega = 100  # MODIFIED
 ksi = 0.01 # MODIFIED
 
 
-Node.clear()
-Element.clear()
+Node.Clear()
+Element.Clear()
 
-# %%% Create nodes
+# %%% Create nodes and add them to the assembler such that it knows of them
 
 node1 = Node(0,0,s1)
 node2 = Node(L,0,s1)
@@ -51,10 +51,10 @@ node2.FixDofs('z')
 # %%%% test adding a load to the node
 
 # define a lambda function running over omega for p_x
-omega_f = 10
+omega_f = 100
 p_x = lambda omega: 1 if omega == omega_f else 0
 
-# add load to node2
+# add a load directly to node2
 
 node1.AddLoad([p_x, 0, 0])
 
@@ -64,10 +64,10 @@ node1.AddLoad([p_x, 0, 0])
 
 # %%% Create element
 
-# initialise element
-elem = Element ( [node1, node2] , s1)
+# initialise element by setting its nodes and adding to the assembler
+elem = Element([node1, node2], s1)
  
-# %%% trial setting elements
+# %%% now set the sections (or element types for that matter)
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
@@ -75,13 +75,17 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # s1.PlotStructure(plot_elements=True)
 
-# %%% set boundary conditions
-
-
 
 # %%% Add distributed load
-elem.AddDistributedLoad([q_r,q_b,0], omega)
+# TODO - should check whether this is correct, for now it just adds the load as a function
+q_r = lambda omega: 1 if omega == omega_f else 0
+q_b = lambda omega: 1 if omega == omega_f else 0
+elem.AddDistributedLoad([q_r,q_b,0])
 
+# %%% Get the global stiffness and force matrices
+
+global_K = s1.GlobalStiffness(omega)
+global_F = s1.GlobalForce(omega)
 
 # %%% get the global constrained stiffness and force
 
