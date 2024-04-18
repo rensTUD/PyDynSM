@@ -51,6 +51,7 @@ node2.FixDofs('z')
 # %%%% test adding a load to the node
 
 # define a lambda function running over omega for p_x
+# TODO - see how to add a time domain load instead of freq domain load
 omega_f = 100
 p_x = lambda omega: 1 if omega == omega_f else 0
 

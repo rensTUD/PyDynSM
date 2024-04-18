@@ -8,7 +8,7 @@ Created on Tue Mar 12 13:11:13 2024
 # %% Import dependencies
 
 import numpy as np
-# from .baseelement import BaseElement
+from abc import ABC, abstractmethod
 
 # %% Class definitions
 '''
@@ -27,10 +27,13 @@ where the contribution of the rod is as:
 '''
 
 # %% standard structural element class
-class StructuralElement():
+class StructuralElement(ABC):
     '''
     Parent class of any other element, all functions are inherited by its child classes so add functions if necessary.
     '''
+   
+    element_name = None # initialise element name which should be overrided within the child class
+    
     def __init__(self,dofs):
         
         # leave this here
@@ -38,6 +41,12 @@ class StructuralElement():
         
         self.dofs = dofs
         self.nodal_dofs = self.GetNodalDofs(self.dofs,self.Ndof)
+        
+        # check if an element name is assigned
+        if self.element_name is None:
+            raise ValueError(f"Class {self.__class__.__name__} must define a 'name' class attribute.")
+        
+        
     
     def GetNodalDofs(self, dofs, Ndof):
         '''
@@ -121,10 +130,73 @@ class StructuralElement():
             u_elem_full[dof] = u_elem_local[i]
         
         return u_elem_full
+    
+    @abstractmethod
+    def ElementWaveNumbers(self, omega):
+        '''
+        Must return the wavenumbers of the element
+        '''
+        pass
+    
+    @abstractmethod
+    def LocalStiffness(self, omega):
+        '''
+        Must return the local stiffness matrix for the element.
+        '''
+        pass
+    
+    @abstractmethod
+    def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
+        '''
+        Must return the local element displacements as a function of global displacements, frequency, and number of evaluation points.
+        
+        Return should be:
+            [displacement_dof1 
+             displacement_dof2
+             ...]
+        '''
+        pass
+    
+    @abstractmethod
+    def Coefficients(self, u_node_local, omega):
+        '''
+        Must return the solution coefficients of the general solution of the element
+        '''
+        pass
+    
+    @abstractmethod
+    def LocalDistributedLoad(self, q, omega):
+        '''
+        Must return the local distributed load vector.
+        '''
+        pass
+    
+class ElementFactory:
+    '''
+    class that keeps track of all added elements such that they can easily be added to the Element class
+    '''
+    
+    # initialise empty dictionary that contains the classes
+    elements = {}
+
+    @classmethod
+    def RegisterElement(cls, element_class):
+        
+        cls.elements[element_class.element_name] = element_class
+
+    @classmethod
+    def CreateElement(cls, element_name, **kwargs):
+        element_class = cls.elements.get(element_name)
+        if not element_class:
+            raise ValueError(f"No element registered with name: {element_name}")
+        return element_class(**kwargs)
+    
 
 # %% specific local element classes
 
 class EB_Beam(StructuralElement):
+    
+    element_name = 'EB Beam'
     
     def __init__(self, rhoA, EI, L, ksi = None):
         
@@ -152,7 +224,7 @@ class EB_Beam(StructuralElement):
         # assign local variables for ease of coding
         EI = self.EI*(1+2j*self.ksi)
         L = self.L
-        beta_b = self.beta_b(omega)
+        beta_b = self.ElementWaveNumbers(omega)
         
         
         K_local = np.empty((4,4), complex)
@@ -162,7 +234,7 @@ class EB_Beam(StructuralElement):
         
         return K_local        
   
-    def beta_b(self,omega):
+    def ElementWaveNumbers(self,omega):
         '''
         Determines the wavenumbers
         '''
@@ -187,7 +259,7 @@ class EB_Beam(StructuralElement):
         L = self.L
 
         # determine wavenumber
-        beta_b = self.beta_b(omega)
+        beta_b = self.ElementWaveNumbers(omega)
         
         # extract loads
         q_z = q[0]
@@ -238,7 +310,7 @@ class EB_Beam(StructuralElement):
         rhoA = self.rhoA  
         EI = self.EI * (1 + 2j * ksi)
         L = self.L
-        beta_b = self.beta_b(omega)
+        beta_b = self.ElementWaveNumbers(omega)
         
         # TODO - should change this based on new derivations..
         
@@ -266,7 +338,7 @@ class EB_Beam(StructuralElement):
         ksi = self.ksi
         EI = self.EI*(1 + 2j * ksi)
         q = self.q[1]
-        beta_b = self.beta_b(omega)
+        beta_b = self.ElementWaveNumbers(omega)
         
         # check if C is input        
         if C == None:
@@ -287,7 +359,7 @@ class EB_Beam(StructuralElement):
         ksi = self.ksi
         EI = self.EI*(1 + 2j * ksi)
         q = self.q[1]
-        beta_b = self.beta_b(omega)
+        beta_b = self.ElementWaveNumbers(omega)
         
         # check if C is input        
         if C == None:
@@ -300,7 +372,9 @@ class EB_Beam(StructuralElement):
     
     
 class Rod_1D(StructuralElement):
-            
+         
+    element_name = 'Rod'
+    
     def __init__(self, rhoA, EA, L, ksi = None):
         
         # define what dofs the rod contributes to and initialise
@@ -325,7 +399,7 @@ class Rod_1D(StructuralElement):
         L = self.L
                 
         # determine wavenumber
-        beta_r = self.beta_r(omega)
+        beta_r = self.ElementWaveNumbers(omega)
     
         # initialise empty stiffness vector
         K_local = np.empty((2,2),complex)
@@ -338,7 +412,7 @@ class Rod_1D(StructuralElement):
     
         return K_local
     
-    def beta_r(self, omega):
+    def ElementWaveNumbers(self, omega):
         '''
         function that calculates the wavenumbers for frequency omega
         '''
@@ -358,7 +432,7 @@ class Rod_1D(StructuralElement):
         
 
         # determine wavenumber
-        beta_r = self.beta_r(omega)
+        beta_r = self.ElementWaveNumbers(omega)
         
         
         el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
