@@ -3,7 +3,6 @@
 
 # %% import main classes
 from .node import Node
-from .constrainer import Constrainer
 from .element import Element
 from .assembler import Assembler
 

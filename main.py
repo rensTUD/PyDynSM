@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import pydynsm as PDM
 
 Node = PDM.Node
-Constrainer = PDM.Constrainer
 Element = PDM.Element
 Assembler = PDM.Assembler
 
