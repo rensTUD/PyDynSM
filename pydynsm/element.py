@@ -2,9 +2,7 @@
 
 import numpy as np
 
-# import the defines elements
-from .elements import Rod_1D
-from .elements import EB_Beam
+from .elements import ElementFactory
 
 # %% class definition
 class Element:
@@ -16,11 +14,8 @@ class Element:
     def Clear():
         Element.ne = 0
         
-    def __init__ (self, nodes, assembler=None, Rod_1D=Rod_1D, EB_Beam=EB_Beam):
-        
-        # assign element classes through dependency injection 
-        self.Rod_1D = Rod_1D
-        self.EB_Beam = EB_Beam
+    
+    def __init__ (self, nodes, assembler=None):
                 
         # assign nodes
         self.nodes = nodes
@@ -72,13 +67,10 @@ class Element:
         props['L'] = self.L
         
         try:
-            # check for element and accordingly assign the properties 
-            if element_type == 'Rod':
-                # unpack props
-                element = Rod_1D(**props)
-            elif element_type == 'EB Beam':
-                element = self.EB_Beam(**props)
-        
+            
+            #  try to load the element from the element factory                
+            element = ElementFactory.CreateElement(element_type, **props)
+            
             # store the element
             self.element_types[element_type] = element    
         except Exception as e:

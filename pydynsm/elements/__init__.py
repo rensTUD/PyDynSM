@@ -5,5 +5,10 @@ Created on Tue Mar 12 13:12:44 2024
 @author: rensv
 """
 
-from .localelements import EB_Beam
-from .localelements import Rod_1D
+from .structuralelement import StructuralElement, ElementFactory
+
+# import any new elements
+from .eb_beam import EB_Beam
+from .rod_1d import Rod_1D
+
+

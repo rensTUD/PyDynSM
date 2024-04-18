@@ -67,6 +67,9 @@ node1.AddLoad([p_x, 0, 0])
 
 # initialise element by setting its nodes and adding to the assembler
 elem = Element([node1, node2], s1)
+
+# %%% try to set a section that is not implemented yet
+elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
  
 # %%% now set the sections (or element types for that matter)
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
