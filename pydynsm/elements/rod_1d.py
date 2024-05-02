@@ -11,9 +11,10 @@ from .structuralelement import StructuralElement, ElementFactory
 
 # %% class definition
 
+@ElementFactory.ElementType('Rod')
 class Rod_1D(StructuralElement):
          
-    element_name = 'Rod'
+    # element_name = 'Rod'
     
     def __init__(self, rhoA, EA, L, ksi = None):
         
@@ -99,6 +100,4 @@ class Rod_1D(StructuralElement):
         '''
         pass
     
-# %%% Register class with the ElementFactory
-
-ElementFactory.RegisterElement(Rod_1D)    
+ 

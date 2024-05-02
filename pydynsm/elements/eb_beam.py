@@ -10,9 +10,10 @@ from .structuralelement import StructuralElement, ElementFactory
 
 # %% class definition
 
+@ElementFactory.ElementType('EB Beam')
 class EB_Beam(StructuralElement):
     
-    element_name = 'EB Beam'
+    # element_name = 'EB Beam'
     
     def __init__(self, rhoA, EI, L, ksi = None):
         
@@ -186,6 +187,4 @@ class EB_Beam(StructuralElement):
         
         return -phi   
     
-# %%% Register class with the ElementFactory
 
-ElementFactory.RegisterElement(EB_Beam)

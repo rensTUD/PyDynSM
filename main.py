@@ -26,13 +26,13 @@ s1 = Assembler('beam')
 
 # %%% Parameters
 EA = 7e6
-EI = 1.5 * 7e06 # MODIFIED
-rhoA = 1e03  # MODIFIED
-q_r = 0*1e02 + 0j # MODIFIED
-q_b = 1*1e06 + 0j # MODIFIED
+EI = 1.5 * 7e06 
+rhoA = 1e03 
+q_r = 0*1e02 + 0j 
+q_b = 1*1e06 + 0j 
 L  = 1
-omega = 100  # MODIFIED
-ksi = 0.01 # MODIFIED
+omega = 100  
+ksi = 0.01 
 
 
 Node.Clear()
