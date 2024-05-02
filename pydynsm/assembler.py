@@ -41,9 +41,17 @@ class Assembler:
         self.StructurePlotter = plotter.StructurePlotter()
         
         print(f"Assembler '{self.name}' successfully initialised")
+
     
 # %% Nodes 
 
+    def UpdateDofsDecorator(func):
+        """Decorator to update constrained DOFs before method call."""
+        def wrapper(self, *args, **kwargs):
+            self._UpdateConstrainedDofs()  # Update DOFs before the function call
+            return func(self, *args, **kwargs)
+        return wrapper   
+    
     def RegisterNode(self, node):
         '''
         Adds a node to the assembler if it's not already registered.
@@ -149,19 +157,17 @@ class Assembler:
             
         return f_global
     
+    @UpdateDofsDecorator
     def GlobalConstrainedStiffness(self, omega):
         '''
         Constrains the global stiffness matrix with the use of static condensation (I think?)
         
         # TODO: check what exactly happens here and explain it in docstring
         '''
-        
-        # TODO: Right now we update every time we need it, should make either a decorator or an observer function to dynamically handle this and not have to think of it anymore
-        # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
-        
+                
         return self.GlobalStiffness(omega)[np.ix_(self.free_dofs,self.free_dofs)]
     
+    @UpdateDofsDecorator
     def GlobalConstrainedForce(self, omega):
         '''
         Constrains the global stiffness matrix with the use of static condensation (I think?)
@@ -170,7 +176,7 @@ class Assembler:
         '''
         
         # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
+        # self._UpdateConstrainedDofs()    
         
         # extract the constrained dofs and their values
         constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
@@ -190,13 +196,15 @@ class Assembler:
         '''
 
         return np.linalg.inv(Kc_global) @ fc_global
-    
+
+
+    @UpdateDofsDecorator
     def SupportReactions(self, k_global, u_free, f_global):
         '''
         Gets the support reactions
         '''
         # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
+        # self._UpdateConstrainedDofs()    
         
         # extract the constrained dofs and their values
         constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
@@ -205,7 +213,7 @@ class Assembler:
         Kcf = k_global[np.ix_(constrained_dofs,self.free_dofs)]
         Kcc = k_global[np.ix_(constrained_dofs,constrained_dofs)]
         
-        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_dofs]
+        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_dofs] 
 
     def FullDisplacement(self, u_free):
         '''
@@ -224,7 +232,8 @@ class Assembler:
         u_full[constrained_dofs] = constrained_values
         
         return u_full
-    
+
+# %% Internal functions    
     def _UpdateConstrainedDofs(self):
         """
         Update the list of constrained DOFs based on registered nodes.
@@ -241,7 +250,9 @@ class Assembler:
         all_dofs = set(range(Assembler.Ndofs * len(self.nodes)))  
         constrained_indices = {dof[0] for dof in self.constrained_dofs}
         self.free_dofs = list(all_dofs - constrained_indices)        
-        
+
+
+# %% TODO's        
     # TODO
     def SaveAssembler(self):
        '''
