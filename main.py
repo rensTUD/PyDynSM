@@ -38,13 +38,9 @@ ksi = 0.01
 Node.Clear()
 Element.Clear()
 
-# %%% Create nodes and add them to the assembler such that it knows of them
+# %%% Create nodes from the assembler
 
-# old method
-# node1 = Node(0,0,s1)
-# node2 = Node(L,0,s1)
 
-# new method
 node1 = s1.CreateNode(0,0)
 node2 = s1.CreateNode(L,0)
 
@@ -69,8 +65,8 @@ node1.AddLoad([p_x, 0, 0])
 
 # %%% Create element
 
-# initialise element by setting its nodes and adding to the assembler
-elem = Element([node1, node2], s1)
+# initialise element by setting its nodes and calling it from the assembler
+elem = s1.CreateElement([node1, node2])
 
 # %%% try to set a section that is not implemented yet
 elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})

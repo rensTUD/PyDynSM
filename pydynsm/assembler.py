@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from . import plotter
 from .node import Node
-
+from .element import Element
 # %% main class definition
 
 class Assembler:
@@ -67,6 +67,15 @@ class Assembler:
         if element not in self.elements:
             self.elements.append(element)
     
+    def CreateElement(self, nodes, element_type=None, props={}):
+        """Creates an element and registers it automatically with the assembler."""
+        new_element = Element(nodes)
+        self.RegisterElement(new_element)
+        
+        # TODO - if element_type is given, set the section as well - need to test this
+        if element_type:
+            new_element.SetSection(element_type, props)
+        return new_element     
     
 # %% Plotting    
     def PlotStructure(self, plot_elements=False):

@@ -89,10 +89,6 @@ class Node:
         # node name
         self.name = f"Node {Node.nn}"
         
-        # # add the node to the assembler if given
-        # if assembler is not None:
-        #     assembler.RegisterNode(self)
-
     def AddLoad(self, p):
         """
         Adds the given loads to the node.
