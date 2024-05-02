@@ -49,7 +49,7 @@ class Node:
         Node.nn = 0
         Node.constrained_dofs_global.clear()
         
-    def __init__(self, x, z, assembler=None, x_fixed=False, z_fixed=False, phi_fixed=False): 
+    def __init__(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False): 
         """
         The constructor for Node class.
 
@@ -89,9 +89,9 @@ class Node:
         # node name
         self.name = f"Node {Node.nn}"
         
-        # add the node to the assembler if given
-        if assembler is not None:
-            assembler.RegisterNode(self)
+        # # add the node to the assembler if given
+        # if assembler is not None:
+        #     assembler.RegisterNode(self)
 
     def AddLoad(self, p):
         """

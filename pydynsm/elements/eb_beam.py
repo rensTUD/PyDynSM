@@ -12,9 +12,7 @@ from .structuralelement import StructuralElement, ElementFactory
 
 @ElementFactory.ElementType('EB Beam')
 class EB_Beam(StructuralElement):
-    
-    # element_name = 'EB Beam'
-    
+
     def __init__(self, rhoA, EI, L, ksi = None):
         
         # define what dofs the eb beam contributes to and initialise

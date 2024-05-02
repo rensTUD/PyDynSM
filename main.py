@@ -40,8 +40,13 @@ Element.Clear()
 
 # %%% Create nodes and add them to the assembler such that it knows of them
 
-node1 = Node(0,0,s1)
-node2 = Node(L,0,s1)
+# old method
+# node1 = Node(0,0,s1)
+# node2 = Node(L,0,s1)
+
+# new method
+node1 = s1.CreateNode(0,0)
+node2 = s1.CreateNode(L,0)
 
 # %%% Now set the constraints directly onto the nodes
 node1.FixDofs('x', 'z')

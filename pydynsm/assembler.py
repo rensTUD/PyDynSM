@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 # %% import others
 
-from .import plotter
+from . import plotter
+from .node import Node
 
 # %% main class definition
 
@@ -40,15 +41,25 @@ class Assembler:
         self.StructurePlotter = plotter.StructurePlotter()
         
         print(f"Assembler '{self.name}' successfully initialised")
-        
+    
+# %% Nodes 
+
     def RegisterNode(self, node):
         '''
         Adds a node to the assembler if it's not already registered.
         '''
         if node not in self.nodes:
-            self.nodes.append(node)         # add node to list
+            self.nodes.append(node)          # add node to list
             self._UpdateConstrainedDofs()    # update lists of constrained and free dofs
+    
+    def CreateNode(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False):
+        """Creates a node and registers it automatically with the assembler."""
+        new_node = Node(x, z, x_fixed=x_fixed, z_fixed=z_fixed, phi_fixed=phi_fixed)
+        self.RegisterNode(new_node)
+        return new_node        
 
+# %% Elements
+  
     def RegisterElement(self, element):
         '''
         Adds an element to the assembler if it's not already registered.
@@ -56,6 +67,8 @@ class Assembler:
         if element not in self.elements:
             self.elements.append(element)
     
+    
+# %% Plotting    
     def PlotStructure(self, plot_elements=False):
         
         self.StructurePlotter.PlotNodes(self.nodes)
@@ -64,6 +77,8 @@ class Assembler:
             self.StructurePlotter.PlotElements(self.elements)
             
         self.StructurePlotter.ShowStructure(f'Structure Configuration: {self.name}')
+
+# %% Stiffness, Force, Displacements
 
     def GlobalStiffness(self, omega):
         '''
