@@ -238,6 +238,7 @@ class Assembler:
         """
         Update the list of constrained DOFs based on registered nodes.
         """
+        # TODO - currently a full check is performed, this is not optimal, should rewrite such that we can dynamically add / remove fixed dofs
         self.constrained_dofs.clear()
         for node in self.nodes:
             self.constrained_dofs.extend(node.constrained_dofs)  # Assuming node.constrained_dofs is accessible
