@@ -30,7 +30,12 @@ class Node:
     
     nn   = 0
     
-    def __init__(self,x,z):
+    dof_configurations = {
+        '2D': ['x', 'z', 'phi'],
+        '3D': ['x', 'z', 'y', 'phi_x', 'phi_z', 'phi_y']
+        }
+    
+    def __init__(self,x,z,config='2D'):
         
         # location in space
         self.x     = x
@@ -49,7 +54,8 @@ class Node:
         Node.nn   += 1
         
         # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
-        self.dofs = {'x': None, 'y': None, 'z': None} # initialise as free nodes
+        self.config = config
+        self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
 
     def update_element_dof(self,changes=None):
         if changes:
@@ -121,19 +127,20 @@ class Element:
     
     def __init__(self, nodes):
         
+        # Element number
         self.id = Element.ne
+        Element.ne += 1 # increment element number
         
+        # reference the nodes
         self.nodes = nodes
         
+        # connect the element to the node
         for node in nodes:
             node.connect_element(self)  # Connect this element to its nodes
         
         # assign same dofs of node on initialisation
-        self.dofs = {node.id: node.dofs for node in nodes}
+        self.dofs = {node.id: node.dofs.copy() for node in nodes}
         
-        # increment element number
-        Element.ne += 1
-
     def fix_dof(self, node, *dofs):
         '''
         Fixed dof at a certain node on element level
@@ -225,47 +232,56 @@ def calculate_L(B, unique_dofs, redundant_dofs):
 
 def assign_dof_indices(elements):
     dof_indices = {}
-            
-    for element in elements:
-        base_index = 6 * element.id
-        for idx, node in enumerate(element.nodes):
-            # Assign indices for each DOF of this node in the current element
-            offset = base_index + 3 * idx # Each element contributes 6 DOFs, 3 per node
-            dof_indices[(node.id, element.id)] = {
-                'x': offset,
-                'y': offset + 1,
-                'z': offset + 2
-            }
-            
+    global_index = 0  # Start a global index counter for all DOFs in the system
+
+    for node in nodes:
+        for element in node.connected_elements:
+            # Initialize an entry for this node within this element
+            dof_indices[(node.id, element.id)] = {}
+            # Use the DOF configuration for this particular node (based on the node's own configuration)
+            for dof in node.dofs.keys():
+                dof_indices[(node.id, element.id)][dof] = global_index
+                global_index += 1  # Increment global index for each DOF
+
     return dof_indices
 
 def build_matrix_B(nodes, elements, dof_indices):
-    num_dof = 6 * len(elements)  # Assuming 2 nodes per element, each with 3 DOFs
+    # Calculate the total number of DOFs
+    num_dof = sum(len(node.dofs) for element in elements for node in element.nodes )  # Dynamic count of all DOFs
     B = np.zeros((0, num_dof))
 
     # Enforce compatibility conditions at each node
     for node in nodes:
         if len(node.connected_elements) > 1:  # Only consider nodes connected to more than one element
-            for dof in ['x', 'y', 'z']:
-                all_dofs = []
-                # Collect all DOF indices and values for this node from each connected element
-                for element in node.connected_elements:
-                    if (node.id, element.id) in dof_indices:
-                        index = dof_indices[(node.id, element.id)][dof]
-                        dof_value = element.dofs[node.id][dof]  # Retrieve the DOF value from the element's settings
-                        all_dofs.append((index, dof_value))
+            # We need to handle this correctly using (node.id, element.id)
+            connected_indices = []
+            for element in node.connected_elements:
+                if (node.id, element.id) in dof_indices:
+                    connected_indices.append((element, dof_indices[(node.id, element.id)]))
 
-                # Use the first DOF as the reference for compatibility
-                if all_dofs:
-                    primary_index, primary_value = all_dofs[0]
-                    for index, value in all_dofs[1:]:
-                        if value == primary_value:  # Compare values, enforce compatibility if they match
-                            row = np.zeros(num_dof)
-                            row[primary_index] = 1  # Positive sign for the primary dof
-                            row[index] = -1  # Negative sign for the redundant dof
-                            B = np.vstack([B, row])  # Add this new row to the matrix B
+            # Proceed only if there are connected elements with valid DOF indices
+            if connected_indices:
+                # Assuming all elements have the same DOFs for nodes
+                for dof in node.dofs.keys():
+                    all_dofs = []
+                    for element, indices in connected_indices:
+                        if dof in indices:
+                            index = indices[dof]
+                            dof_value = element.nodes[element.nodes.index(node)].dofs[dof]  # Node's DOF value from the element
+                            all_dofs.append((index, dof_value))
+                    
+                    # Use the first DOF as the reference for compatibility
+                    if all_dofs:
+                        primary_index, primary_value = all_dofs[0]
+                        for index, value in all_dofs[1:]:
+                            if value == primary_value:  # Enforce compatibility if values match
+                                row = np.zeros(num_dof)
+                                row[primary_index] = 1  # Positive sign for the primary DOF
+                                row[index] = -1  # Negative sign for the compared DOF
+                                B = np.vstack([B, row])  # Add this new row to the matrix B
 
     return B
+
 
 def connectivity(nodes, elements):
     dof_indices = assign_dof_indices(elements)
@@ -282,5 +298,47 @@ B, L, dof_indices, unique_dofs, redundant_dofs = connectivity(nodes, elements)
 print("B:", B)
 print("L:", L)
 
+# %%
 
+def classify_unique_dofs(nodes, unique_dof_indices, dof_indices):
+    """
+    Classifies unique DOFs as free, fixed, or prescribed and returns indices and values for prescribed DOFs.
 
+    Args:
+    - nodes (list of Node objects): The nodes in the system.
+    - unique_dof_indices (list of int): Indices of DOFs classified as unique.
+    - dof_indices (dict): Dictionary mapping (node_id, element_id) to a dictionary of DOF names and their global indices.
+
+    Returns:
+    - tuple of lists: 
+        - List of indices for free DOFs
+        - List of indices for fixed DOFs
+        - List of indices for prescribed DOFs
+        - List of values for prescribed DOFs
+    """
+
+    # Reverse the dof_indices to find node and DOF name by global index
+    reverse_dof_lookup = {index: (node_id, dof_name) for node_id, dofs in dof_indices.items() for dof_name, index in dofs.items()}
+
+    free_dofs = []
+    fixed_dofs = []
+    prescribed_dofs = []
+    prescribed_values = []
+
+    for dof_index in unique_dof_indices:
+        node_id, dof_name = reverse_dof_lookup[dof_index]
+        node = next(node for node in nodes if node.id == node_id)
+        dof_value = node.dofs[dof_name]
+
+        # Classify the DOF based on its value
+        if dof_value is None:
+            free_dofs.append(dof_index)
+        elif dof_value == 0:
+            fixed_dofs.append(dof_index)
+        else:
+            prescribed_dofs.append(dof_index)
+            prescribed_values.append(dof_value)
+
+    return free_dofs, fixed_dofs, prescribed_dofs, prescribed_values
+
+free_dofs, fixed_dofs, prescribed_dofs, prescribed_values = classify_unique_dofs(nodes, unique_dofs, dof_indices)
