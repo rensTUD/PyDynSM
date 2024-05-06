@@ -8,7 +8,6 @@ Created on Sun May  5 18:21:53 2024
 
 
 import numpy as np
-from scipy.linalg import null_space
 from scipy.linalg import inv
 
 # %% universal decorator:
@@ -298,47 +297,100 @@ B, L, dof_indices, unique_dofs, redundant_dofs = connectivity(nodes, elements)
 print("B:", B)
 print("L:", L)
 
-# %%
+# %% Classify u_unique
 
-def classify_unique_dofs(nodes, unique_dof_indices, dof_indices):
+def classify_unique_dofs_u(nodes, unique_dofs, dof_indices):
     """
-    Classifies unique DOFs as free, fixed, or prescribed and returns indices and values for prescribed DOFs.
-
+    Classifies unique DOFs and returns indices and values for free, fixed, and prescribed DOFs.
     Args:
-    - nodes (list of Node objects): The nodes in the system.
-    - unique_dof_indices (list of int): Indices of DOFs classified as unique.
-    - dof_indices (dict): Dictionary mapping (node_id, element_id) to a dictionary of DOF names and their global indices.
-
+    nodes (list of Node): List of all nodes.
+    unique_dof_indices (list): List of indices considered unique.
+    dof_indices (dict): Maps (node_id, element_id) to a dict of DOFs and their indices.
     Returns:
-    - tuple of lists: 
-        - List of indices for free DOFs
-        - List of indices for fixed DOFs
-        - List of indices for prescribed DOFs
-        - List of values for prescribed DOFs
+    tuple: Contains lists of indices for free, fixed, prescribed DOFs, and values of prescribed DOFs.
     """
+    reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
+    
+    U_unique = {
+    'free': [],
+    'fixed': [],
+    'prescribed': [],
+    'values': []
+    }
 
-    # Reverse the dof_indices to find node and DOF name by global index
-    reverse_dof_lookup = {index: (node_id, dof_name) for node_id, dofs in dof_indices.items() for dof_name, index in dofs.items()}
-
-    free_dofs = []
-    fixed_dofs = []
-    prescribed_dofs = []
-    prescribed_values = []
-
-    for dof_index in unique_dof_indices:
+    for dof_index in unique_dofs:
+        if dof_index not in reverse_dof_lookup:
+            print(f"No matching node-dof pair found for index {dof_index}")
+            continue
         node_id, dof_name = reverse_dof_lookup[dof_index]
-        node = next(node for node in nodes if node.id == node_id)
+        node = next((n for n in nodes if n.id == node_id), None)
+        
+        if not node:
+            print(f"Warning: No node found for node_id {node_id}")
+            continue
+        
         dof_value = node.dofs[dof_name]
-
-        # Classify the DOF based on its value
         if dof_value is None:
-            free_dofs.append(dof_index)
+            U_unique['free'].append(dof_index)
         elif dof_value == 0:
-            fixed_dofs.append(dof_index)
+            U_unique['fixed'].append(dof_index)
         else:
-            prescribed_dofs.append(dof_index)
-            prescribed_values.append(dof_value)
+            U_unique['prescribed'].append(dof_index)
+            U_unique['values'].append(dof_value)
 
-    return free_dofs, fixed_dofs, prescribed_dofs, prescribed_values
+    return U_unique
 
-free_dofs, fixed_dofs, prescribed_dofs, prescribed_values = classify_unique_dofs(nodes, unique_dofs, dof_indices)
+U_unique = classify_unique_dofs_u(nodes, unique_dofs, dof_indices)
+print("Free DOF Indices:", U_unique['free'])
+print("Fixed DOF Indices:", U_unique['fixed'])
+print("Prescribed DOF Indices:", U_unique['prescribed'])
+print("Values of Prescribed DOFs:", U_unique['values'])
+# %% classify q
+
+def classify_q(nodes, unique_dofs, dof_indices):
+    """
+    Classifies unique DOFs as free, fixed, or prescribed and extracts their indices.
+    
+    Args:
+    nodes (list of Node): List of all nodes.
+    unique_dof_indices (list): List of indices considered unique.
+    dof_indices (dict): Maps (node_id, element_id) to a dict of DOFs and their indices.
+    
+    Returns:
+    dict: A dictionary with keys 'free', 'fixed', 'prescribed', and 'values',
+          containing the indices in `unique_dof_indices` and values for prescribed DOFs.
+    """
+    reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
+    
+    q_unique = {
+        'free': [],
+        'fixed': [],
+        'prescribed': [],
+        'values': []
+    }
+
+    for index, dof_index in enumerate(unique_dofs):
+        if dof_index not in reverse_dof_lookup:
+            continue  # Skip if no matching node-dof pair is found
+        node_id, dof_name = reverse_dof_lookup[dof_index]
+        node = next((n for n in nodes if n.id == node_id), None)
+        
+        if not node:
+            continue  # Skip if no node is found
+        
+        dof_value = node.dofs[dof_name]
+        if dof_value is None:
+            q_unique['free'].append(index)
+        elif dof_value == 0:
+            q_unique['fixed'].append(index)
+        else:
+            q_unique['prescribed'].append(index)
+            q_unique['values'].append((index, dof_value))
+
+    return q_unique
+
+q_unique = classify_q(nodes, unique_dofs, dof_indices)
+print("Free DOF Indices:", q_unique['free'])
+print("Fixed DOF Indices:", q_unique['fixed'])
+print("Prescribed DOF Indices:", q_unique['prescribed'])
+print("Values of Prescribed DOFs:", q_unique['values'])
