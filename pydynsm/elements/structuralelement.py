@@ -184,15 +184,13 @@ class ElementFactory:
 
     @classmethod
     def RegisterElement(cls, element_class):
-        
+        """
+        Registers a new element class in the factory under its 'name' attribute.
+        """
+        if not hasattr(element_class, 'element_name') or not isinstance(element_class.element_name, str):
+            raise ValueError("Element classes must have a 'name' attribute of type str before registration.")
+            
         cls.elements[element_class.element_name] = element_class
-
-    # @classmethod
-    # def CreateElement(cls, element_name, **kwargs):
-    #     element_class = cls.elements.get(element_name)
-    #     if not element_class:
-    #         raise ValueError(f"No element registered with name: {element_name}")
-    #     return element_class(**kwargs)
     
     @classmethod
     def CreateElement(cls, element_name, **kwargs):
@@ -212,3 +210,17 @@ class ElementFactory:
         Return a list of currently registered element types.
         """
         return list(cls.elements.keys())
+    
+    @classmethod
+    def ElementType(cls, name):
+        """
+        Decorator to register new element types by setting the 'name' attribute
+        on the element class and then registering it.
+        """
+        def decorator(element_class):
+            setattr(element_class, 'element_name', name)  # Explicitly set the name attribute
+            cls.RegisterElement(element_class)   # Register the class using the newly set name
+            return element_class
+        return decorator
+    
+    
