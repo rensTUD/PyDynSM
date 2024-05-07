@@ -26,22 +26,23 @@ s1 = Assembler('beam')
 
 # %%% Parameters
 EA = 7e6
-EI = 1.5 * 7e06 # MODIFIED
-rhoA = 1e03  # MODIFIED
-q_r = 0*1e02 + 0j # MODIFIED
-q_b = 1*1e06 + 0j # MODIFIED
+EI = 1.5 * 7e06 
+rhoA = 1e03 
+q_r = 0*1e02 + 0j 
+q_b = 1*1e06 + 0j 
 L  = 1
-omega = 100  # MODIFIED
-ksi = 0.01 # MODIFIED
+omega = 100  
+ksi = 0.01 
 
 
 Node.Clear()
 Element.Clear()
 
-# %%% Create nodes and add them to the assembler such that it knows of them
+# %%% Create nodes from the assembler
 
-node1 = Node(0,0,s1)
-node2 = Node(L,0,s1)
+
+node1 = s1.CreateNode(0,0)
+node2 = s1.CreateNode(L,0)
 
 # %%% Now set the constraints directly onto the nodes
 node1.FixDofs('x', 'z')
@@ -64,8 +65,8 @@ node1.AddLoad([p_x, 0, 0])
 
 # %%% Create element
 
-# initialise element by setting its nodes and adding to the assembler
-elem = Element([node1, node2], s1)
+# initialise element by setting its nodes and calling it from the assembler
+elem = s1.CreateElement([node1, node2])
 
 # %%% try to set a section that is not implemented yet
 elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})

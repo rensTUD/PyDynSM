@@ -49,7 +49,7 @@ class Node:
         Node.nn = 0
         Node.constrained_dofs_global.clear()
         
-    def __init__(self, x, z, assembler=None, x_fixed=False, z_fixed=False, phi_fixed=False): 
+    def __init__(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False): 
         """
         The constructor for Node class.
 
@@ -70,7 +70,7 @@ class Node:
         # numbers of dofs [x,z,phi]
         self.dofs  = [Node.ndof, Node.ndof+1, Node.ndof+2]
         
-        # empty list with the fixed dofs and their values: [[dof1, value], [dof2, value]]
+        # empty list with the fixed / prescribed dofs and their values: [[dof1, value], [dof2, value]] - if fixed -> value = 0
         self.constrained_dofs = []        
         
         
@@ -89,10 +89,6 @@ class Node:
         # node name
         self.name = f"Node {Node.nn}"
         
-        # add the node to the assembler if given
-        if assembler is not None:
-            assembler.RegisterNode(self)
-
     def AddLoad(self, p):
         """
         Adds the given loads to the node.
@@ -124,11 +120,11 @@ class Node:
                a default value, and tuples represent the DOF and its specific value to be fixed.
         """
         for arg in args:
-            if isinstance(arg, str):  # Single DOF with default value
+            if isinstance(arg, str):  # Single DOF that is fixed, value = 0
                 dof = arg
                 value = 0  # Default value
                 self.FixDof(dof, value)
-            elif isinstance(arg, list) and len(arg) == 2:
+            elif isinstance(arg, list) and len(arg) == 2: # if is list and len = 2, then use value (prescribed dof)
                 dof, value = arg
                 self.FixDof(dof, value)
             else:

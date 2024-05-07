@@ -11,8 +11,9 @@ import matplotlib.pyplot as plt
 
 # %% import others
 
-from .import plotter
-
+from . import plotter
+from .node import Node
+from .element import Element
 # %% main class definition
 
 class Assembler:
@@ -40,15 +41,33 @@ class Assembler:
         self.StructurePlotter = plotter.StructurePlotter()
         
         print(f"Assembler '{self.name}' successfully initialised")
-        
+
+    
+# %% Nodes 
+
+    def UpdateDofsDecorator(func):
+        """Decorator to update constrained DOFs before method call."""
+        def wrapper(self, *args, **kwargs):
+            self._UpdateConstrainedDofs()  # Update DOFs before the function call
+            return func(self, *args, **kwargs)
+        return wrapper   
+    
     def RegisterNode(self, node):
         '''
         Adds a node to the assembler if it's not already registered.
         '''
         if node not in self.nodes:
-            self.nodes.append(node)         # add node to list
+            self.nodes.append(node)          # add node to list
             self._UpdateConstrainedDofs()    # update lists of constrained and free dofs
+    
+    def CreateNode(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False):
+        """Creates a node and registers it automatically with the assembler."""
+        new_node = Node(x, z, x_fixed=x_fixed, z_fixed=z_fixed, phi_fixed=phi_fixed)
+        self.RegisterNode(new_node)
+        return new_node        
 
+# %% Elements
+  
     def RegisterElement(self, element):
         '''
         Adds an element to the assembler if it's not already registered.
@@ -56,6 +75,17 @@ class Assembler:
         if element not in self.elements:
             self.elements.append(element)
     
+    def CreateElement(self, nodes, element_type=None, props={}):
+        """Creates an element and registers it automatically with the assembler."""
+        new_element = Element(nodes)
+        self.RegisterElement(new_element)
+        
+        # TODO - if element_type is given, set the section as well - need to test this
+        if element_type:
+            new_element.SetSection(element_type, props)
+        return new_element     
+    
+# %% Plotting    
     def PlotStructure(self, plot_elements=False):
         
         self.StructurePlotter.PlotNodes(self.nodes)
@@ -64,6 +94,8 @@ class Assembler:
             self.StructurePlotter.PlotElements(self.elements)
             
         self.StructurePlotter.ShowStructure(f'Structure Configuration: {self.name}')
+
+# %% Stiffness, Force, Displacements
 
     def GlobalStiffness(self, omega):
         '''
@@ -125,19 +157,17 @@ class Assembler:
             
         return f_global
     
+    @UpdateDofsDecorator
     def GlobalConstrainedStiffness(self, omega):
         '''
         Constrains the global stiffness matrix with the use of static condensation (I think?)
         
         # TODO: check what exactly happens here and explain it in docstring
         '''
-        
-        # TODO: Right now we update every time we need it, should make either a decorator or an observer function to dynamically handle this and not have to think of it anymore
-        # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
-        
+                
         return self.GlobalStiffness(omega)[np.ix_(self.free_dofs,self.free_dofs)]
     
+    @UpdateDofsDecorator
     def GlobalConstrainedForce(self, omega):
         '''
         Constrains the global stiffness matrix with the use of static condensation (I think?)
@@ -146,7 +176,7 @@ class Assembler:
         '''
         
         # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
+        # self._UpdateConstrainedDofs()    
         
         # extract the constrained dofs and their values
         constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
@@ -166,13 +196,15 @@ class Assembler:
         '''
 
         return np.linalg.inv(Kc_global) @ fc_global
-    
+
+
+    @UpdateDofsDecorator
     def SupportReactions(self, k_global, u_free, f_global):
         '''
         Gets the support reactions
         '''
         # update constrained and free dofs list
-        self._UpdateConstrainedDofs()    
+        # self._UpdateConstrainedDofs()    
         
         # extract the constrained dofs and their values
         constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
@@ -181,7 +213,7 @@ class Assembler:
         Kcf = k_global[np.ix_(constrained_dofs,self.free_dofs)]
         Kcc = k_global[np.ix_(constrained_dofs,constrained_dofs)]
         
-        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_dofs]
+        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_dofs] 
 
     def FullDisplacement(self, u_free):
         '''
@@ -200,11 +232,13 @@ class Assembler:
         u_full[constrained_dofs] = constrained_values
         
         return u_full
-    
+
+# %% Internal functions    
     def _UpdateConstrainedDofs(self):
         """
         Update the list of constrained DOFs based on registered nodes.
         """
+        # TODO - currently a full check is performed, this is not optimal, should rewrite such that we can dynamically add / remove fixed dofs
         self.constrained_dofs.clear()
         for node in self.nodes:
             self.constrained_dofs.extend(node.constrained_dofs)  # Assuming node.constrained_dofs is accessible
@@ -217,7 +251,9 @@ class Assembler:
         all_dofs = set(range(Assembler.Ndofs * len(self.nodes)))  
         constrained_indices = {dof[0] for dof in self.constrained_dofs}
         self.free_dofs = list(all_dofs - constrained_indices)        
-        
+
+
+# %% TODO's        
     # TODO
     def SaveAssembler(self):
        '''

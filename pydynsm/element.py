@@ -15,7 +15,7 @@ class Element:
         Element.ne = 0
         
     
-    def __init__ (self, nodes, assembler=None):
+    def __init__ (self, nodes):
                 
         # assign nodes
         self.nodes = nodes
@@ -52,11 +52,9 @@ class Element:
         # initialise empty list with nodal forces due to element loads
         self.element_nodal_loads = []
         
-        # add element to the assembler
-        if assembler is not None:
-            assembler.RegisterElement(self)
 
-    def SetSection (self, element_type, props):
+
+    def SetSection(self, element_type, props):
         '''
         This function serves to set the elements, we will have to think how we do this properly but this is an initial set-up
         
