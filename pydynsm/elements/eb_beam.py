@@ -184,5 +184,8 @@ class EB_Beam(StructuralElement):
         phi = -C[3] * beta_b * np.sin(beta_b * x) + C[2] * beta_b * np.cos(beta_b * x) + C[0] * beta_b * np.sinh(beta_b * x) + C[1] * beta_b * np.cosh(beta_b * x)
         
         return -phi   
-    
 
+
+# %%% Register class with the ElementFactory
+
+ElementFactory.RegisterElement(EB_Beam)
