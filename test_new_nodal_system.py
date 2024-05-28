@@ -6,7 +6,6 @@ Created on Sun May  5 18:21:53 2024
 """
 
 
-
 import numpy as np
 from scipy.linalg import inv
 
@@ -26,22 +25,71 @@ def decorate_after(function):
 
 # %% node class
 class Node:
+    """
+    A class to represent a node in a structural system.
+
+    Attributes
+    ----------
+    nn : int
+        Class variable to count the number of nodes.
+    dof_configurations : dict
+        Dictionary containing DOF configurations for different node types.
+    x : float
+        x-coordinate of the node.
+    z : float
+        z-coordinate of the node.
+    y : float
+        y-coordinate of the node, applicable for 3D configurations.
+    config : str
+        Configuration type of the node (e.g., '2D', '3D', '2D_torsion').
+    dofs : dict
+        Dictionary of degrees of freedom for the node with DOF names as keys and their statuses as values.
+    nodal_forces : list
+        List to store forces applied to the node.
+    id : int
+        Unique identifier for the node.
+    connected_elements : list
+        List of elements connected to this node.
+    """
     
+    # initialise number of nodes (nn) as class-variable, to be updated by every new class object
     nn   = 0
     
+    # Node configurations are ordered as: 'Name': [['linear dofs'],['rotational dofs']]. Linear dofs also define the amount of coordinates we can assign (thus 2D or 3D basically)
     dof_configurations = {
-        '2D': ['x', 'z', 'phi'],
-        '3D': ['x', 'z', 'y', 'phi_x', 'phi_z', 'phi_y']
+        '2D': [['x', 'z'],['phi_y']],
+        '3D': [['x', 'z', 'y'], ['phi_x', 'phi_z', 'phi_y']],
+        '2D_torsion': [['x', 'z'], ['phi_x', 'phi_y']] 
         }
     
-    def __init__(self,x,z,config='2D'):
+    def __init__(self,x,z,y=0,config='2D'):
+        """
+        Initializes the Node with its coordinates and DOF configuration.
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate of the node.
+        z : float
+            z-coordinate of the node.
+        y : float, optional
+            y-coordinate of the node, default is 0 (for 2D configurations).
+        config : str, optional
+            Configuration type of the node, default is '2D'.
+        """
         
+        # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
+        self.config = config
+        # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
+        self.dofs = {dof: None for dof_list in self.dof_configurations[config] for dof in dof_list}
+
         # location in space
         self.x     = x
         self.z     = z
+        self.y     = y
         
         # initialise empty forces lists
-        self.nodal_forces     = []
+        self.nodal_forces = []
         
         # node name
         self.id = Node.nn
@@ -51,57 +99,146 @@ class Node:
         
         # increment the class variables
         Node.nn   += 1
-        
-        # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
-        self.config = config
-        self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
 
     def update_element_dof(self,changes=None):
+        """
+        Updates the DOFs of connected elements based on changes in the node's DOFs.
+
+        Parameters
+        ----------
+        changes : dict, optional
+            Dictionary of changes in DOFs, default is None.
+        """
         if changes:
             for element in self.connected_elements:
                 element.update_node_dofs(self,changes)
-        else:
-            print('No changes to update')                
+        # else:
+        #     print('No changes to update')                
 
     def connect_element(self, element):
+        """
+        Connects an element to this node.
+
+        Parameters
+        ----------
+        element : Element
+            The element to be connected to this node.
+        """
         if element not in self.connected_elements:
             self.connected_elements.append(element)
             
     @decorate_after(update_element_dof)
     def fix_node(self, *dofs):
         """
-        Fix specified DOFs to zero and return changes.
+        Fixes specified DOFs of the node to zero.
+
+        Parameters
+        ----------
+        *dofs : str
+            DOFs to be fixed.
+
+        Returns
+        -------
+        changes : dict or None
+            Dictionary of changes made to DOFs, or None if no changes were made.
+        
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the current configuration.
         """
         changes = {}
-        for dof in dofs:
-            if self.dofs[dof] != 0:
-                self.dofs[dof] = 0
-                changes[dof] = 0
-        return changes if changes else None  # Return None if no changes
+        try:
+            for dof in dofs:
+                if dof not in self.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                if self.dofs[dof] != 0:
+                    self.dofs[dof] = 0
+                    changes[dof] = 0
+        except ValueError as e:
+            print(e)
+            return None
+        return changes if changes else None
         
     @decorate_after(update_element_dof)
     def free_node(self, *dofs):
         """
-        Set specified DOFs to free (None) and return changes.
+        Frees specified DOFs of the node (sets them to None).
+
+        Parameters
+        ----------
+        *dofs : str
+            DOFs to be freed.
+
+        Returns
+        -------
+        changes : dict or None
+            Dictionary of changes made to DOFs, or None if no changes were made.
+        
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the current configuration.
         """
         changes = {}
-        for dof in dofs:
-            if self.dofs[dof] != None:
-                self.dofs[dof] = None
-                changes[dof] = None
+        try:
+            for dof in dofs:
+                if dof not in self.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                if self.dofs[dof] is not None:
+                    self.dofs[dof] = None
+                    changes[dof] = None
+        except ValueError as e:
+            print(e)
+            return None
         return changes if changes else None
     
     @decorate_after(update_element_dof)     
     def prescribe_node(self, **dofs):
         """
-        Set specified DOFs to given values and return changes.
+        Sets specified DOFs of the node to given values.
+
+        Parameters
+        ----------
+        **dofs : dict
+            DOFs to be prescribed with their values.
+
+        Returns
+        -------
+        changes : dict or None
+            Dictionary of changes made to DOFs, or None if no changes were made.
+        
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the current configuration.
         """
         changes = {}
-        for dof, value in dofs.items():
-            if self.dofs[dof] != value:
-                self.dofs[dof] = value
-                changes[dof] = value
+        try:
+            for dof, value in dofs.items():
+                if dof not in self.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                if self.dofs[dof] != value:
+                    self.dofs[dof] = value
+                    changes[dof] = value
+        except ValueError as e:
+            print(e)
+            return None
         return changes if changes else None
+    
+    def get_coords(self):
+        """
+        Returns the coordinates of the node based on its DOF configuration.
+
+        Returns
+        -------
+        tuple
+            Coordinates of the node (x, z, y) if applicable.
+        """
+        coords = [self.x, self.z]
+        if 'y' in self.dof_configurations[self.config][0]:
+            coords.append(self.y)
+        return tuple(coords)
     
 
     
@@ -109,22 +246,56 @@ class Node:
 nodes = [Node(i,0) for i in range(3)]      
 nodes.append(Node(1,1))
 node1 = nodes[0]
-# # text fix 'x' and 'y' of node 1
-# node1.fix_node('x','y')
-# print(node1.dofs)
-# # text free 'x'
-# node1.free_node('x')
-# print(node1.dofs)
-# # test set value
-# node1.prescribe_node(x=1,y=2)
-# print(node1.dofs)
+node2 = nodes[1]
+node3 = nodes[2]
+node4 = nodes[3]
+#%%
+
+#%%% test fix 'x' and 'y' of node 1, should throw error
+node1.fix_node('x','y')
+print(node1.dofs)
+
+# now just add z
+node1.fix_node('z')
+print(node1.dofs)
+
+#%%% test free 'x'
+node1.free_node('x')
+print(node1.dofs)
+
+#%%% test set value
+node1.prescribe_node(x=1,y=2)
+print(node1.dofs)
 
 #%% element class
 class Element:
+    """
+    A class to represent an element in a structural system.
+
+    Attributes
+    ----------
+    ne : int
+        Class variable to count the number of elements.
+    id : int
+        Unique identifier for the element.
+    nodes : list of Node
+        List of nodes connected to this element.
+    dofs : dict
+        Dictionary of DOFs for each node in the element.
+    """
     
+    # initialise number of elements (ne) as class-variable, to be updated by every new class object
     ne = 0
     
     def __init__(self, nodes):
+        """
+        Initializes the Element with its connected nodes.
+
+        Parameters
+        ----------
+        nodes : list of Node
+            List of nodes connected to this element.
+        """
         
         # Element number
         self.id = Element.ne
@@ -141,28 +312,88 @@ class Element:
         self.dofs = {node.id: node.dofs.copy() for node in nodes}
         
     def fix_dof(self, node, *dofs):
-        '''
-        Fixed dof at a certain node on element level
-        '''
-        if node in self.nodes:
+        """
+        Fixes specified DOFs at a given node in the element.
+
+        Parameters
+        ----------
+        node : Node
+            The node where DOFs are to be fixed.
+        *dofs : str
+            DOFs to be fixed at the node.
+
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the node's current configuration.
+        """
+        try:
             for dof in dofs:
+                if dof not in node.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
                 self.dofs[node.id][dof] = 0
+        except ValueError as e:
+            print(e)
                 
     def free_dof(self, node, *dofs):
-        '''
-        Fixed dof at a certain node on element level
-        '''
-        if node in self.nodes:
+        """
+        Frees specified DOFs at a given node in the element.
+
+        Parameters
+        ----------
+        node : Node
+            The node where DOFs are to be freed.
+        *dofs : str
+            DOFs to be freed at the node.
+
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the node's current configuration.
+        """
+        try:
             for dof in dofs:
-                self.dofs[node.id][dof] = None 
+                if dof not in node.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
+                self.dofs[node.id][dof] = None
+        except ValueError as e:
+            print(e)
                 
     def prescribe_dof(self, node, **dofs):
-        
-        if node in self.nodes:
+        """
+        Prescribes specified DOFs at a given node in the element to given values.
+
+        Parameters
+        ----------
+        node : Node
+            The node where DOFs are to be prescribed.
+        **dofs : dict
+            DOFs and their values to be prescribed at the node.
+
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the node's current configuration.
+        """
+        try:
             for dof, value in dofs.items():
-                self.dofs[node.id][dof] = value                
+                if dof not in node.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
+                self.dofs[node.id][dof] = value
+        except ValueError as e:
+            print(e)              
 
     def update_node_dofs(self, node, changes):
+        """
+        Updates the DOFs of a given node in the element based on changes.
+
+        Parameters
+        ----------
+        node : Node
+            The node whose DOFs are to be updated.
+        changes : dict
+            Dictionary of DOFs and their new values.
+        """
         if node in self.nodes:    
             for dof, value in changes.items():           
                 self.dofs[node.id][dof] = value
@@ -172,26 +403,30 @@ elements = [Element([nodes[0], nodes[1]]),
             Element([nodes[1], nodes[2]]),
             Element([nodes[3],nodes[1]])]
 element1 = elements[0]
+element2 = elements[1]
+element3 = elements[2]
 
-# # test fix local 'x' and 'y' of the element
-# element1.fix_dof(node1,'x','y')
-# print(element1.dofs)
-# # test free local 'x' 
-# element1.free_dof(node1,'x')
-# print(element1.dofs)
-# # test set value
-# element1.prescribe_dof(node1, x=1,y=2)
-# print(element1.dofs)
 
+#%%
+# test fix local 'x' and 'y' of the element
+element1.fix_dof(node1,'x','y')
+print(element1.dofs)
+# test free local 'x' 
+element1.free_dof(node1,'x')
+print(element1.dofs)
+# test set value
+element1.prescribe_dof(node1, x=1,y=2)
+print(element1.dofs)
+#%%
 # set x,z of first and z of last node fixed
 node1.fix_node('x','z')
 print(node1.dofs)
 
-node3 = nodes[2]
+
 node3.fix_node('z')
 print(node3.dofs)
 
-node4 = nodes[3]
+
 node4.fix_node('z')
 print(node4.dofs)
 
@@ -297,57 +532,10 @@ B, L, dof_indices, unique_dofs, redundant_dofs = connectivity(nodes, elements)
 print("B:", B)
 print("L:", L)
 
-# %% Classify u_unique
 
-def classify_unique_dofs_u(nodes, unique_dofs, dof_indices):
-    """
-    Classifies unique DOFs and returns indices and values for free, fixed, and prescribed DOFs.
-    Args:
-    nodes (list of Node): List of all nodes.
-    unique_dof_indices (list): List of indices considered unique.
-    dof_indices (dict): Maps (node_id, element_id) to a dict of DOFs and their indices.
-    Returns:
-    tuple: Contains lists of indices for free, fixed, prescribed DOFs, and values of prescribed DOFs.
-    """
-    reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
-    
-    U_unique = {
-    'free': [],
-    'fixed': [],
-    'prescribed': [],
-    'values': []
-    }
+#%% classify u_unique and q nodes in terms of free, fixed, and prescribed
 
-    for dof_index in unique_dofs:
-        if dof_index not in reverse_dof_lookup:
-            print(f"No matching node-dof pair found for index {dof_index}")
-            continue
-        node_id, dof_name = reverse_dof_lookup[dof_index]
-        node = next((n for n in nodes if n.id == node_id), None)
-        
-        if not node:
-            print(f"Warning: No node found for node_id {node_id}")
-            continue
-        
-        dof_value = node.dofs[dof_name]
-        if dof_value is None:
-            U_unique['free'].append(dof_index)
-        elif dof_value == 0:
-            U_unique['fixed'].append(dof_index)
-        else:
-            U_unique['prescribed'].append(dof_index)
-            U_unique['values'].append(dof_value)
-
-    return U_unique
-
-U_unique = classify_unique_dofs_u(nodes, unique_dofs, dof_indices)
-print("Free DOF Indices:", U_unique['free'])
-print("Fixed DOF Indices:", U_unique['fixed'])
-print("Prescribed DOF Indices:", U_unique['prescribed'])
-print("Values of Prescribed DOFs:", U_unique['values'])
-# %% classify q
-
-def classify_q(nodes, unique_dofs, dof_indices):
+def classify_u_q(nodes, unique_dofs, dof_indices):
     """
     Classifies unique DOFs as free, fixed, or prescribed and extracts their indices.
     
@@ -357,16 +545,27 @@ def classify_q(nodes, unique_dofs, dof_indices):
     dof_indices (dict): Maps (node_id, element_id) to a dict of DOFs and their indices.
     
     Returns:
-    dict: A dictionary with keys 'free', 'fixed', 'prescribed', and 'values',
-          containing the indices in `unique_dof_indices` and values for prescribed DOFs.
+    
+    q_classified: dict: A dictionary with keys 'free', 'fixed', 'prescribed', and 'values',
+          containing the indices in `unique_dof_indices` and values for prescribed DOFs in the original u space
+    
+    U_classified: dict: A dictionary with keys 'free', 'fixed', 'prescribed', and 'values',
+      containing the indices in `unique_dof_indices` and values for prescribed DOFs in q_space          
     """
     reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
     
-    q_unique = {
+    q_classified = {
         'free': [],
         'fixed': [],
         'prescribed': [],
         'values': []
+    }
+    
+    U_classified = {
+    'free': [],
+    'fixed': [],
+    'prescribed': [],
+    'values': []
     }
 
     for index, dof_index in enumerate(unique_dofs):
@@ -380,17 +579,27 @@ def classify_q(nodes, unique_dofs, dof_indices):
         
         dof_value = node.dofs[dof_name]
         if dof_value is None:
-            q_unique['free'].append(index)
+            q_classified['free'].append(index)
+            U_classified['free'].append(dof_index)
         elif dof_value == 0:
-            q_unique['fixed'].append(index)
+            q_classified['fixed'].append(index)
+            U_classified['fixed'].append(dof_index)
         else:
-            q_unique['prescribed'].append(index)
-            q_unique['values'].append((index, dof_value))
+            q_classified['prescribed'].append(index)
+            q_classified['values'].append((index, dof_value))
+            U_classified['prescribed'].append(dof_index)
+            U_classified['values'].append(dof_index)
 
-    return q_unique
+    return q_classified, U_classified
 
-q_unique = classify_q(nodes, unique_dofs, dof_indices)
-print("Free DOF Indices:", q_unique['free'])
-print("Fixed DOF Indices:", q_unique['fixed'])
-print("Prescribed DOF Indices:", q_unique['prescribed'])
-print("Values of Prescribed DOFs:", q_unique['values'])
+q_classified, U_classified = classify_u_q(nodes, unique_dofs, dof_indices)
+
+print("U Free DOF Indices:", U_classified['free'])
+print("U Fixed DOF Indices:", U_classified['fixed'])
+print("U Prescribed DOF Indices:", U_classified['prescribed'])
+print("U Values of Prescribed DOFs:", U_classified['values'])
+
+print("q Free DOF Indices:", q_classified['free'])
+print("q Fixed DOF Indices:", q_classified['fixed'])
+print("q Prescribed DOF Indices:", q_classified['prescribed'])
+print("q Values of Prescribed DOFs:", q_classified['values'])
