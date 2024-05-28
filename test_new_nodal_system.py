@@ -127,7 +127,7 @@ class Node:
         if element not in self.connected_elements:
             self.connected_elements.append(element)
             
-    @decorate_after(update_element_dof)
+    # @decorate_after(update_element_dof)
     def fix_node(self, *dofs):
         """
         Fixes specified DOFs of the node to zero.
@@ -136,31 +136,11 @@ class Node:
         ----------
         *dofs : str
             DOFs to be fixed.
-
-        Returns
-        -------
-        changes : dict or None
-            Dictionary of changes made to DOFs, or None if no changes were made.
-        
-        Raises
-        ------
-        ValueError
-            If any of the specified DOFs are not in the current configuration.
         """
-        changes = {}
-        try:
-            for dof in dofs:
-                if dof not in self.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
-                if self.dofs[dof] != 0:
-                    self.dofs[dof] = 0
-                    changes[dof] = 0
-        except ValueError as e:
-            print(e)
-            return None
-        return changes if changes else None
+    
+        self.prescribe_node(**{dof: 0 for dof in dofs})
         
-    @decorate_after(update_element_dof)
+    # @decorate_after(update_element_dof)
     def free_node(self, *dofs):
         """
         Frees specified DOFs of the node (sets them to None).
@@ -169,31 +149,11 @@ class Node:
         ----------
         *dofs : str
             DOFs to be freed.
-
-        Returns
-        -------
-        changes : dict or None
-            Dictionary of changes made to DOFs, or None if no changes were made.
-        
-        Raises
-        ------
-        ValueError
-            If any of the specified DOFs are not in the current configuration.
         """
-        changes = {}
-        try:
-            for dof in dofs:
-                if dof not in self.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
-                if self.dofs[dof] is not None:
-                    self.dofs[dof] = None
-                    changes[dof] = None
-        except ValueError as e:
-            print(e)
-            return None
-        return changes if changes else None
+        
+        self.prescribe_node(**{dof: None for dof in dofs})
     
-    @decorate_after(update_element_dof)     
+    # @decorate_after(update_element_dof)     
     def prescribe_node(self, **dofs):
         """
         Sets specified DOFs of the node to given values.
@@ -202,11 +162,6 @@ class Node:
         ----------
         **dofs : dict
             DOFs to be prescribed with their values.
-
-        Returns
-        -------
-        changes : dict or None
-            Dictionary of changes made to DOFs, or None if no changes were made.
         
         Raises
         ------
@@ -223,8 +178,11 @@ class Node:
                     changes[dof] = value
         except ValueError as e:
             print(e)
-            return None
-        return changes if changes else None
+            return
+        
+        if changes:
+            for element in self.connected_elements:
+                element.update_node_dofs(self,changes)
     
     def get_coords(self):
         """
@@ -327,13 +285,8 @@ class Element:
         ValueError
             If any of the specified DOFs are not in the node's current configuration.
         """
-        try:
-            for dof in dofs:
-                if dof not in node.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
-                self.dofs[node.id][dof] = 0
-        except ValueError as e:
-            print(e)
+        
+        self.prescribe_dof(node, **{dof: 0 for dof in dofs})
                 
     def free_dof(self, node, *dofs):
         """
@@ -351,13 +304,8 @@ class Element:
         ValueError
             If any of the specified DOFs are not in the node's current configuration.
         """
-        try:
-            for dof in dofs:
-                if dof not in node.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
-                self.dofs[node.id][dof] = None
-        except ValueError as e:
-            print(e)
+        
+        self.prescribe_dof(node, **{dof: None for dof in dofs})
                 
     def prescribe_dof(self, node, **dofs):
         """
@@ -408,13 +356,13 @@ element3 = elements[2]
 
 
 #%%
-# test fix local 'x' and 'y' of the element
+#%%% test fix local 'x' and 'y' of the element
 element1.fix_dof(node1,'x','y')
 print(element1.dofs)
-# test free local 'x' 
+#%%% test free local 'x' 
 element1.free_dof(node1,'x')
 print(element1.dofs)
-# test set value
+#%%% test set value
 element1.prescribe_dof(node1, x=1,y=2)
 print(element1.dofs)
 #%%
@@ -501,7 +449,7 @@ def build_matrix_B(nodes, elements, dof_indices):
                     for element, indices in connected_indices:
                         if dof in indices:
                             index = indices[dof]
-                            dof_value = element.nodes[element.nodes.index(node)].dofs[dof]  # Node's DOF value from the element
+                            dof_value = element.dofs[node.id][dof] # Node's DOF value from the element itself
                             all_dofs.append((index, dof_value))
                     
                     # Use the first DOF as the reference for compatibility
