@@ -185,7 +185,3 @@ class EB_Beam(StructuralElement):
         
         return -phi   
 
-
-# %%% Register class with the ElementFactory
-
-ElementFactory.RegisterElement(EB_Beam)

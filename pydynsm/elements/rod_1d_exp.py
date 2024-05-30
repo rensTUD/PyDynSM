@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 18 17:27:06 2024
+Created on Thu Apr 18 17:27:16 2024
 
 @author: rensv
 """
+
 # import dependencies
 import numpy as np
 from .structuralelement import StructuralElement, ElementFactory
@@ -11,23 +12,21 @@ from .structuralelement import StructuralElement, ElementFactory
 # %% class definition
 
 
-@ElementFactory.ElementType('Rayleigh-Love Rod')
-class RayleighLoveRod(StructuralElement):
-    
-    element_name = 'Rayleigh-Love Rod'
+@ElementFactory.ElementType('Rod')
+class Rod1D(StructuralElement):
 
-    def __init__(self, rho, A, E, Ir, L, nu, ksi=None):
+    element_name = 'Rod'
+
+    def __init__(self, rho, A, E, L, ksi=None):
         """
         Input:
             rho: value. Density of the element's material [kg/m^3]
             A:   value. Area of the element [m^2]
             E:   value. E-modulus of the element's material [Pa]
-            Ir:  value. Cross-sectional moment of inertia of the element [m^4]
             L:   value. Length of element [m]
-            nu:  value. Poisson's ratio [-]
             ksi: value. Damping of the element's material [-]
         """
-        # define what dofs the RL rod contributes to and initialise
+        # define what dofs the rod contributes to and initialise
         dofs = [0]
         super().__init__(dofs)
 
@@ -35,9 +34,7 @@ class RayleighLoveRod(StructuralElement):
         self.rho = rho
         self.A = A
         self.E = E
-        self.Ir = Ir
         self.L = L
-        self.nu = nu
         # assisgn ksi if given otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
 
@@ -58,73 +55,52 @@ class RayleighLoveRod(StructuralElement):
         '''
 
         # Assign local variables for ease of coding
-        rho = self.rho
         A = self.A
         E = self.E
-        Ir = self.Ir
         L = self.L
-        nu = self.nu
-        
+
+        # determine wavenumber
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
         # Initialize K matrix
         K_local = np.empty((2, 2), complex)
         # Copy-paste the matrix directly from Maple (also called K_dyn)
-        K_local = np.array([[1j*(-Ir*nu**2*omega**2*rho + A*E)*(alpha_1*np.exp(-1j*alpha_2*L) - alpha_2*np.exp(-1j*alpha_1*L)) / (np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L)), 1j*(-Ir*nu**2*omega**2*rho + A*E)*(alpha_1 - alpha_2) / (-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))], [1j*(-Ir*nu**2*omega**2*rho + A*E)*np.exp(-1j*L*(alpha_1 + alpha_2))*(alpha_1 - alpha_2) / (-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L)), -1j*(-Ir*nu**2*omega**2*rho + A*E)*(alpha_2*np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L)*alpha_1) / (np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))]])
+        K_local = np.array([[1j*A*E*(np.exp(-1j*alpha_2*L)*alpha_1 - np.exp(-1j*alpha_1*L)*alpha_2)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L)), 1j*A*E*(alpha_1 - alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))], [1j*A*E*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2))/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L)), -1j*A*E*(np.exp(-1j*alpha_2*L)*alpha_2 - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))]])
 
         return K_local
 
     def element_wavenumbers(self, omega):
         '''
-        Determines the wavenumbers of RayleighLove rod
+        Determines the wavenumbers of 1D rod
         Input:
             omega: array. Range of frequencies of analysis.
         Output:
             alpha_1, alpha_2,: values. Wavenumbers
         '''
         rho = self.rho
-        A = self.A
         E = self.E
-        Ir = self.Ir
-        nu = self.nu
         # Copy-paste from Maple document of Wavenumbers
         # 2nd-order derivative in x, so 2 wavenumbers
-        alpha_1 = (1/(- Ir*nu**2*omega**2*rho + A*E)*
-                   np.sqrt((- Ir*nu**2*omega**2*rho + A*E)*rho*A)*omega)
-        alpha_2 = (- 1/(- Ir*nu**2*omega**2*rho + A*E)*
-                   np.sqrt((- Ir*nu**2*omega**2*rho + A*E)*rho*A)*omega)
+        alpha_1 = (np.sqrt(rho/E)*omega)
+        alpha_2 = (-np.sqrt(rho/E)*omega)
 
         return alpha_1, alpha_2
 
     def local_distributed_load(self, q, omega):
         '''
-        Add a distributed load to the local element
-        Input:
-            q: array. Distributed load. With a shape such as:
-            q = [q_z, q_phi]
-            omega: array. Range of frequencies of analyis
-        Output:
+        add a distributed load to the local element
+
         '''
-        # assign load to itself to keep track
-        self.q = q
 
         # assign local variables for ease of coding
         L = self.L
 
         # determine wavenumber
-        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
+        beta_r = alpha_1
 
-        # extract loads
-        q_z = q[0]
-        q_phi = q[1]
+        el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
 
-        # TODO - check for correctness
-        # el = [ q_z*((np.cos(beta_b*L) - 1.0)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
-        #                 -q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
-        #                 q_z*((np.cos(beta_b*L) - 1)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)), 
-        #                 q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)) 
-        #                 ]
-        
         return el
 
     def local_element_displacements(self, u_nodes_global, omega, num_points):
@@ -170,11 +146,8 @@ class RayleighLoveRod(StructuralElement):
         rho = self.rho
         A = self.A
         E = self.E
-        Ir = self.Ir
         L = self.L
-        nu = self.nu
-        G = self.G
-        alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
+        alpha_1, alpha_2, = self.ElementWaveNumbers(omega)
 
         # get distributed load value
         q = self.q[1]
@@ -187,13 +160,14 @@ class RayleighLoveRod(StructuralElement):
                           [np.exp(-1j*alpha_1*L),
                            np.exp(-1j*alpha_2*L)]])
 
+
         C = A_mat @ (u_node_local)  # + np.array([1/(EI*beta_b**4),0,1/(EI*beta_b**4),0]) * q)
 
         return C
-
+    
     def displacement(self, x, omega, C=None, u_node_local=None):
         """
-        Gets the transverse displacments of the Rayleigh-Love rod
+        Gets the transverse displacments of the 1D rod
         Input:
             x: array. Points along element
             omega: array. Range of frequencies of analysis
@@ -215,4 +189,4 @@ class RayleighLoveRod(StructuralElement):
         u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x)
 
         return u
-
+ 
