@@ -88,18 +88,30 @@ class Rod1D(StructuralElement):
 
     def local_distributed_load(self, q, omega):
         '''
-        add a distributed load to the local element
-
+        Add a distributed load to the local element
+        Input:
+            q: array. Distributed load. With a shape such as:
+            q = [q_z, q_phi]
+            omega: array. Range of frequencies of analyis
+        Output:
         '''
+        # assign load to itself to keep track
+        self.q = q
 
         # assign local variables for ease of coding
+        rho = self.rho
+        E = self.E
         L = self.L
+
+        # extract loads
+        q_x = q[0]
 
         # determine wavenumber
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
-        beta_r = alpha_1
 
-        el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
+        # TODO - check
+        el = np.array([-1j*E*(np.exp(-1j*alpha_2*L)*alpha_1 - np.exp(-1j*alpha_1*L)*alpha_2)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + -1j*E*(alpha_1 - alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2,
+                       -1j*E*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2))/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + 1j*E*(np.exp(-1j*alpha_2*L)*alpha_2 - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2])
 
         return el
 
@@ -145,26 +157,23 @@ class Rod1D(StructuralElement):
         # read all the variables
         rho = self.rho
         A = self.A
-        E = self.E
         L = self.L
         alpha_1, alpha_2, = self.ElementWaveNumbers(omega)
 
         # get distributed load value
-        q = self.q[1]
-        # should be like:
-        # q_b, q_m = self.
-        # TODO - add load?
+        q = self.q[0]
 
         # calculate the coefficients with A_mat copy-pasted from Maple
         A_mat = np.array([[1, 1],
                           [np.exp(-1j*alpha_1*L),
                            np.exp(-1j*alpha_2*L)]])
 
-
-        C = A_mat @ (u_node_local)  # + np.array([1/(EI*beta_b**4),0,1/(EI*beta_b**4),0]) * q)
+        # TODO - check
+        u_load = np.array([-q/(rho*A*omega**2), -q/(rho*A*omega**2)])
+        C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
 
         return C
-    
+
     def displacement(self, x, omega, C=None, u_node_local=None):
         """
         Gets the transverse displacments of the 1D rod

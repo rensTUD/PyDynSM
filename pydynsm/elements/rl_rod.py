@@ -13,7 +13,7 @@ from .structuralelement import StructuralElement, ElementFactory
 
 @ElementFactory.ElementType('Rayleigh-Love Rod')
 class RayleighLoveRod(StructuralElement):
-    
+
     element_name = 'Rayleigh-Love Rod'
 
     def __init__(self, rho, A, E, Ir, L, nu, ksi=None):
@@ -64,7 +64,7 @@ class RayleighLoveRod(StructuralElement):
         Ir = self.Ir
         L = self.L
         nu = self.nu
-        
+
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
         # Initialize K matrix
@@ -110,21 +110,22 @@ class RayleighLoveRod(StructuralElement):
 
         # assign local variables for ease of coding
         L = self.L
+        rho = self.rho
+        A = self.A
+        E = self.E
+        Ir = self.Ir
+        nu = self.nu
 
         # determine wavenumber
-        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
         # extract loads
-        q_z = q[0]
-        q_phi = q[1]
+        q_x = q[0]
 
         # TODO - check for correctness
-        # el = [ q_z*((np.cos(beta_b*L) - 1.0)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
-        #                 -q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)),
-        #                 q_z*((np.cos(beta_b*L) - 1)*np.sinh(beta_b*L) + np.cosh(beta_b*L)*np.sin(beta_b*L) - np.sin(beta_b*L))/(beta_b*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)), 
-        #                 q_phi*(np.sinh(beta_b*L)*np.sin(beta_b*L) - np.cosh(beta_b*L) + np.cos(beta_b*L))/(beta_b**2.0*(np.cosh(beta_b*L)*np.cos(beta_b*L) - 1.0)) 
-        #                 ]
-        
+        el = np.array([-1j*(-omega**2*rho*Ir*nu**2 + E*A)*(alpha_1*np.exp(-1j*alpha_2*L) - alpha_2*np.exp(-1j*alpha_1*L))/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/A/omega**2 + -1j*(-omega**2*rho*Ir*nu**2 + E*A)*(alpha_1- alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/A/omega**2,
+                       -1j*(-omega**2*rho*Ir*nu**2 + E*A)*np.exp(-1j*L*(alpha_1 + alpha_2))*(alpha_1- alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/A/omega**2 + 1j*(-omega**2*rho*Ir*nu**2 + E*A)*(alpha_2*np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/A/omega**2])
+
         return el
 
     def local_element_displacements(self, u_nodes_global, omega, num_points):
@@ -169,25 +170,20 @@ class RayleighLoveRod(StructuralElement):
         # read all the variables
         rho = self.rho
         A = self.A
-        E = self.E
-        Ir = self.Ir
         L = self.L
-        nu = self.nu
-        G = self.G
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
         # get distributed load value
-        q = self.q[1]
-        # should be like:
-        # q_b, q_m = self.
-        # TODO - add load?
+        q = self.q[0]
 
         # calculate the coefficients with A_mat copy-pasted from Maple
         A_mat = np.array([[1, 1],
                           [np.exp(-1j*alpha_1*L),
                            np.exp(-1j*alpha_2*L)]])
 
-        C = A_mat @ (u_node_local)  # + np.array([1/(EI*beta_b**4),0,1/(EI*beta_b**4),0]) * q)
+        # TODO - check
+        u_load = np.array([-q/(rho*A*omega**2), -q/(rho*A*omega**2)])
+        C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
 
         return C
 

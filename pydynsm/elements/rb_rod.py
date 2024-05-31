@@ -218,7 +218,7 @@ class RayleighBishopRod(StructuralElement):
 
         # TODO - check if this is correct
         u_part = np.array([q/rho/A/omega**2, 0, q/rho/A/omega**2, 0])
-        C = np.linalg.inv(A_mat) @ (u_node_local - u_part)
+        C = np.linalg.inv(A_mat) @ (u_node_local + u_part)
 
         return C
 

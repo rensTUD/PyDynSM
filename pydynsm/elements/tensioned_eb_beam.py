@@ -200,7 +200,7 @@ class TensionedEulerBernoulliBeam(StructuralElement):
 
         # TODO - Check if this is correct (in every model)
         u_load = np.array([q/E/Ib/omega**2/rho/A, 0, q/E/Ib/omega**2/rho/A, 0])
-        C = np.linalg.inv(A_mat) @ (u_node_local - u_load)
+        C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
 
         return C
 
