@@ -62,7 +62,7 @@ class Node:
         '2D_torsion': [['x', 'z'], ['phi_x', 'phi_y']] 
         }
     
-    def __init__(self,x,z,y=0,config='2D'):
+    def __init__(self,x,z,y=0,config='2D', dof_config=None):
         """
         Initializes the Node with its coordinates and DOF configuration.
 
@@ -80,6 +80,8 @@ class Node:
         
         # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
         self.config = config
+        # Load any default dof_config or apply custom one SHOULD THINK WHETHER THIS IS USEFULL OR JUST LEAVE IT FULLY AUTOMATIC BASED ON APPLIED SECTIONS
+        self.dof_config = dof_config if dof_config else self.dof_configurations[config]
         # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
         self.dofs = {dof: None for dof_list in self.dof_configurations[config] for dof in dof_list}
 
@@ -111,9 +113,7 @@ class Node:
         """
         if changes:
             for element in self.connected_elements:
-                element.update_node_dofs(self,changes)
-        # else:
-        #     print('No changes to update')                
+                element.update_node_dofs(self,changes)            
 
     def connect_element(self, element):
         """
@@ -127,7 +127,6 @@ class Node:
         if element not in self.connected_elements:
             self.connected_elements.append(element)
             
-    # @decorate_after(update_element_dof)
     def fix_node(self, *dofs):
         """
         Fixes specified DOFs of the node to zero.
@@ -140,7 +139,6 @@ class Node:
     
         self.prescribe_node(**{dof: 0 for dof in dofs})
         
-    # @decorate_after(update_element_dof)
     def free_node(self, *dofs):
         """
         Frees specified DOFs of the node (sets them to None).
@@ -152,8 +150,7 @@ class Node:
         """
         
         self.prescribe_node(**{dof: None for dof in dofs})
-    
-    # @decorate_after(update_element_dof)     
+       
     def prescribe_node(self, **dofs):
         """
         Sets specified DOFs of the node to given values.
@@ -381,6 +378,21 @@ print(node4.dofs)
 # %%
 
 def find_unique_redundant_dofs(B):
+    """
+    Identifies unique and redundant degrees of freedom (DOFs) based on the constraint matrix B.
+
+    Parameters
+    ----------
+    B : numpy.ndarray
+        The constraint matrix where rows represent constraints and columns represent DOFs.
+
+    Returns
+    -------
+    unique_dofs : list of int
+        Sorted list of unique DOFs.
+    redundant_dofs : list of int
+        Sorted list of redundant DOFs.
+    """
     num_dofs = B.shape[1]
     redundant_dofs = set()
     unique_dofs = set()
@@ -401,6 +413,28 @@ def find_unique_redundant_dofs(B):
     return sorted(unique_dofs), sorted(redundant_dofs)
 
 def calculate_L(B, unique_dofs, redundant_dofs):
+    """
+    Calculates the transformation matrix L based on the constraint matrix B.
+
+    Parameters
+    ----------
+    B : numpy.ndarray
+        The constraint matrix where rows represent constraints and columns represent DOFs.
+    unique_dofs : list of int
+        List of unique DOFs.
+    redundant_dofs : list of int
+        List of redundant DOFs.
+
+    Returns
+    -------
+    L : numpy.ndarray
+        The transformation matrix L.
+
+    Raises
+    ------
+    ValueError
+        If the matrix B_r is singular and cannot be inverted.
+    """
     B_r = B[:, redundant_dofs]
     B_u = B[:, unique_dofs]
 
@@ -413,6 +447,19 @@ def calculate_L(B, unique_dofs, redundant_dofs):
         raise ValueError("Matrix B_r is singular and cannot be inverted.")
 
 def assign_dof_indices(elements):
+    """
+    Assigns global indices to the degrees of freedom (DOFs) of all elements.
+
+    Parameters
+    ----------
+    elements : list of Element
+        List of elements in the structural system.
+
+    Returns
+    -------
+    dof_indices : dict
+        Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+    """
     dof_indices = {}
     global_index = 0  # Start a global index counter for all DOFs in the system
 
@@ -428,6 +475,23 @@ def assign_dof_indices(elements):
     return dof_indices
 
 def build_matrix_B(nodes, elements, dof_indices):
+    """
+    Builds the constraint matrix B for the structural system.
+
+    Parameters
+    ----------
+    nodes : list of Node
+        List of nodes in the structural system.
+    elements : list of Element
+        List of elements in the structural system.
+    dof_indices : dict
+        Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+
+    Returns
+    -------
+    B : numpy.ndarray
+        The constraint matrix B.
+    """
     # Calculate the total number of DOFs
     num_dof = sum(len(node.dofs) for element in elements for node in element.nodes )  # Dynamic count of all DOFs
     B = np.zeros((0, num_dof))
@@ -466,6 +530,29 @@ def build_matrix_B(nodes, elements, dof_indices):
 
 
 def connectivity(nodes, elements):
+    """
+    Computes the connectivity information for the structural system.
+
+    Parameters
+    ----------
+    nodes : list of Node
+        List of nodes in the structural system.
+    elements : list of Element
+        List of elements in the structural system.
+
+    Returns
+    -------
+    B : numpy.ndarray
+        The constraint matrix B.
+    L : numpy.ndarray
+        The transformation matrix L.
+    dof_indices : dict
+        Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+    unique_dofs : list of int
+        Sorted list of unique DOFs.
+    redundant_dofs : list of int
+        Sorted list of redundant DOFs.
+    """
     dof_indices = assign_dof_indices(elements)
     B = build_matrix_B(nodes, elements, dof_indices)
     unique_dofs, redundant_dofs = find_unique_redundant_dofs(B)
