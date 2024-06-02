@@ -638,3 +638,46 @@ print("q Free DOF Indices:", q_classified['free'])
 print("q Fixed DOF Indices:", q_classified['fixed'])
 print("q Prescribed DOF Indices:", q_classified['prescribed'])
 print("q Values of Prescribed DOFs:", q_classified['values'])
+#%%
+def classify_u_q2(nodes, unique_dofs, dof_indices):
+    """
+    Classifies unique DOFs as free or constrained (fixed or prescribed) and extracts their indices.
+    
+    Args:
+    nodes (list of Node): List of all nodes.
+    unique_dofs (list): List of indices considered unique.
+    dof_indices (dict): Maps (node_id, element_id) to a dict of DOFs and their indices.
+    
+    Returns:
+    free_dofs: list
+        List of indices in `unique_dofs` that are free.
+    constrained_dofs: list
+        List of lists where each sublist contains a DOF index and its value.
+    """
+    reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
+    
+    free_dofs = []
+    constrained_dofs = []
+
+    for index, dof_index in enumerate(unique_dofs):
+        if dof_index not in reverse_dof_lookup:
+            continue  # Skip if no matching node-dof pair is found
+        node_id, dof_name = reverse_dof_lookup[dof_index]
+        node = next((n for n in nodes if n.id == node_id), None)
+        
+        if not node:
+            continue  # Skip if no node is found
+        
+        dof_value = node.dofs[dof_name]
+        if dof_value is None:
+            free_dofs.append(index)
+        else:
+            constrained_dofs.append([index, dof_value])
+
+    return free_dofs, constrained_dofs
+
+# Usage example
+free_dofs, constrained_dofs = classify_u_q2(nodes, unique_dofs, dof_indices)
+
+print("Free DOF Indices:", free_dofs)
+print("Constrained DOF Indices and Values:", constrained_dofs)
