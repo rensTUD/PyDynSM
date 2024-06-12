@@ -154,7 +154,7 @@ class Node:
         try:
             for dof, value in dofs.items():
                 if dof not in self.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_config}")
                 if self.dofs[dof] != value:
                     self.dofs[dof] = value
                     changes[dof] = value
