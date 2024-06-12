@@ -2,8 +2,8 @@
 
 
 # %% import main classes
-from .node import Node
-from .element import Element
+# from .node import Node
+# from .element import Element
 from .assembler import Assembler
 
 
@@ -12,4 +12,6 @@ from .assembler import Assembler
 from . import elements # elements module
 
 from . import plotter # plotting module
+
+from . import analysis
 

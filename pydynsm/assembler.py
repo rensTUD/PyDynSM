@@ -12,17 +12,16 @@ import matplotlib.pyplot as plt
 # %% import others
 
 from . import plotter
-from .node import Node
-from .element import Element
+# from .node import Node
+# from .element import Element
+# import analysis types
+from .analysis import analysis_old
+from .analysis import analysis_new
 # %% main class definition
 
 class Assembler:
-    
-    # number of dofs, for now we have 2D and thus: [x, z, phi] = 3
-    
-    Ndofs = 3
-    
-    def __init__(self, name, plotter=plotter):
+        
+    def __init__(self, name, analysis_type = analysis_old):
         '''
         Initialisation of assembler.
         '''
@@ -39,18 +38,14 @@ class Assembler:
         
         # load dependencies that are injected
         self.StructurePlotter = plotter.StructurePlotter()
+        self.Node = analysis_type.Node
+        self.Element = analysis_type.Element
+        self.Analysis = analysis_type.Analysis()
         
         print(f"Assembler '{self.name}' successfully initialised")
 
     
 # %% Nodes 
-
-    def UpdateDofsDecorator(func):
-        """Decorator to update constrained DOFs before method call."""
-        def wrapper(self, *args, **kwargs):
-            self._UpdateConstrainedDofs()  # Update DOFs before the function call
-            return func(self, *args, **kwargs)
-        return wrapper   
     
     def RegisterNode(self, node):
         '''
@@ -58,11 +53,10 @@ class Assembler:
         '''
         if node not in self.nodes:
             self.nodes.append(node)          # add node to list
-            self._UpdateConstrainedDofs()    # update lists of constrained and free dofs
     
     def CreateNode(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False):
         """Creates a node and registers it automatically with the assembler."""
-        new_node = Node(x, z, x_fixed=x_fixed, z_fixed=z_fixed, phi_fixed=phi_fixed)
+        new_node = self.Node(x, z, x_fixed=x_fixed, z_fixed=z_fixed, phi_fixed=phi_fixed)
         self.RegisterNode(new_node)
         return new_node        
 
@@ -77,7 +71,7 @@ class Assembler:
     
     def CreateElement(self, nodes, element_type=None, props={}):
         """Creates an element and registers it automatically with the assembler."""
-        new_element = Element(nodes)
+        new_element = self.Element(nodes)
         self.RegisterElement(new_element)
         
         # TODO - if element_type is given, set the section as well - need to test this
@@ -98,159 +92,122 @@ class Assembler:
 # %% Stiffness, Force, Displacements
 
     def GlobalStiffness(self, omega):
-        '''
-        Assembles the global unconstrained stiffness matrix
-        
-        # TODO: should be replaced with the matrix multiplication as in the paper Thanasis found!
-        '''
-        # introduce global stiffness matrix with size [3*Nnodes, 3*Nnodes] (as we have: x,z,phi)
-        k_global = np.zeros( (Assembler.Ndofs*len(self.nodes),Assembler.Ndofs*len(self.nodes) ), complex)
-        
-        for e in self.elements:
-            # get global stiffness matrix of the element and its global dofs
-            elmat = e.Stiffness(omega)
-            idofs = e.GlobalDofs()
-            
-            # assign to the global stiffness matrix of the structure
-            k_global[np.ix_(idofs,idofs)] += elmat
-    
-        return k_global            
+        """
+        Assembles the global unconstrained stiffness matrix.
+
+        Parameters
+        ----------
+        omega : float
+            Frequency parameter.
+
+        Returns
+        -------
+        k_global : numpy.ndarray
+            Global stiffness matrix.
+        """
+        return self.Analysis.GlobalStiffness(self.nodes, self.elements, omega)
 
     def GlobalForce(self, omega):
-        '''
-        Assembles the global unconstrained force vector
-        
-        # TODO: should be replaced with the matrix multiplication as in the paper Thanasis found!
-        '''
-        # initialise global force vector
-        f_global = np.zeros(Assembler.Ndofs*len(self.nodes),complex)
-        
-        # load all forces of the elements
-        for element in self.elements:
-            # check if any loads are present in the element, if not continue
-            if not element.element_nodal_loads:
-                continue
-        
-            # get dofs of element nodes
-            left_dofs = element.nodes[0].dofs
-            right_dofs = element.nodes[1].dofs
-            dofs = np.hstack([left_dofs,right_dofs])
-            # assign every global force to the global force vector
-            for element_nodal_load in element.element_nodal_loads:
-                # evaluate the load
-                f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element_nodal_load, omega)
-        
-        
-        # load all forces on the nodes 
-        for n in self.nodes:
-            # check if any loads are present in the node, if not continue
-            if not n.nodal_forces:
-                continue
-            
-            # loop over all present forces
-            for nodal_force in n.nodal_forces:
-                # Process each component of the nodal force, checking if it's a lambda or a constant
-                force_components = np.array([(force(omega) if callable(force) else force) for force in nodal_force])
-                
-                # Add the evaluated force components to the global force vector at positions specified by n.dofs
-                f_global[n.dofs] += force_components
-            
-        return f_global
-    
-    @UpdateDofsDecorator
+        """
+        Assembles the global unconstrained force vector.
+
+        Parameters
+        ----------
+        omega : float
+            Frequency parameter.
+
+        Returns
+        -------
+        f_global : numpy.ndarray
+            Global force vector.
+        """
+        return self.Analysis.GlobalForce(self.nodes, self.elements, omega)
+
     def GlobalConstrainedStiffness(self, omega):
-        '''
-        Constrains the global stiffness matrix with the use of static condensation (I think?)
-        
-        # TODO: check what exactly happens here and explain it in docstring
-        '''
-                
-        return self.GlobalStiffness(omega)[np.ix_(self.free_dofs,self.free_dofs)]
-    
-    @UpdateDofsDecorator
+        """
+        Constrains the global stiffness matrix.
+
+        Parameters
+        ----------
+        omega : float
+            Frequency parameter.
+
+        Returns
+        -------
+        k_constrained : numpy.ndarray
+            Constrained global stiffness matrix.
+        """
+        return self.Analysis.GlobalConstrainedStiffness(self.nodes, self.elements, omega)
+
     def GlobalConstrainedForce(self, omega):
-        '''
-        Constrains the global stiffness matrix with the use of static condensation (I think?)
-        
-        # TODO: check what exactly happens here and explain it in docstring
-        '''
-        
-        # update constrained and free dofs list
-        # self._UpdateConstrainedDofs()    
-        
-        # extract the constrained dofs and their values
-        constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
-        constrained_values = [value[1] for value in self.constrained_dofs] 
-        
-        # global free,constrained stiffness matrix
-        K_free_constrained = self.GlobalStiffness(omega)[np.ix_(self.free_dofs,constrained_dofs)]
-        
-        # global free forcing vector
-        F_free = self.GlobalForce(omega)[self.free_dofs]
-        
-        return F_free - K_free_constrained @ constrained_values
-    
+        """
+        Constrains the global force vector.
+
+        Parameters
+        ----------
+        omega : float
+            Frequency parameter.
+
+        Returns
+        -------
+        f_constrained : numpy.ndarray
+            Constrained global force vector.
+        """
+        return self.Analysis.GlobalConstrainedForce(self.nodes, self.elements, omega)
+
     def SolveUfree(self, Kc_global, fc_global):
-        '''
-        Solves the free displacements
-        '''
+        """
+        Solves the free displacements.
 
-        return np.linalg.inv(Kc_global) @ fc_global
+        Parameters
+        ----------
+        Kc_global : numpy.ndarray
+            Constrained global stiffness matrix.
+        fc_global : numpy.ndarray
+            Constrained global force vector.
 
+        Returns
+        -------
+        u_free : numpy.ndarray
+            Free displacements.
+        """
+        return self.Analysis.SolveUfree(Kc_global, fc_global)
 
-    @UpdateDofsDecorator
     def SupportReactions(self, k_global, u_free, f_global):
-        '''
-        Gets the support reactions
-        '''
-        # update constrained and free dofs list
-        # self._UpdateConstrainedDofs()    
-        
-        # extract the constrained dofs and their values
-        constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
-        constrained_values = [value[1] for value in self.constrained_dofs] 
-        
-        Kcf = k_global[np.ix_(constrained_dofs,self.free_dofs)]
-        Kcc = k_global[np.ix_(constrained_dofs,constrained_dofs)]
-        
-        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_dofs] 
+        """
+        Calculates the support reactions.
+
+        Parameters
+        ----------
+        k_global : numpy.ndarray
+            Global stiffness matrix.
+        u_free : numpy.ndarray
+            Free displacements.
+        f_global : numpy.ndarray
+            Global force vector.
+
+        Returns
+        -------
+        reactions : numpy.ndarray
+            Support reactions.
+        """
+        return self.Analysis.SupportReactions(k_global, u_free, f_global)
 
     def FullDisplacement(self, u_free):
-        '''
-        function that returns the full displacement of the whole structure (i.e. calculated free dofs and constrained ones)
-        '''
-        
-        # extract the constrained dofs and their values
-        constrained_dofs = [dof[0] for dof in self.constrained_dofs] 
-        constrained_values = [value[1] for value in self.constrained_dofs] 
-        
-        # initialise full displacement vector
-        u_full = np.zeros(len(self.free_dofs) + len(constrained_dofs), dtype=complex)
-        
-        # populate        
-        u_full[self.free_dofs] = u_free
-        u_full[constrained_dofs] = constrained_values
-        
-        return u_full
+        """
+        Returns the full displacement vector for the entire structure.
 
-# %% Internal functions    
-    def _UpdateConstrainedDofs(self):
-        """
-        Update the list of constrained DOFs based on registered nodes.
-        """
-        # TODO - currently a full check is performed, this is not optimal, should rewrite such that we can dynamically add / remove fixed dofs
-        self.constrained_dofs.clear()
-        for node in self.nodes:
-            self.constrained_dofs.extend(node.constrained_dofs)  # Assuming node.constrained_dofs is accessible
-        self._UpdateFreeDofs()
+        Parameters
+        ----------
+        u_free : numpy.ndarray
+            Free displacements.
 
-    def _UpdateFreeDofs(self):
+        Returns
+        -------
+        u_full : numpy.ndarray
+            Full displacement vector.
         """
-        Update the list of free DOFs.
-        """
-        all_dofs = set(range(Assembler.Ndofs * len(self.nodes)))  
-        constrained_indices = {dof[0] for dof in self.constrained_dofs}
-        self.free_dofs = list(all_dofs - constrained_indices)        
+        return self.Analysis.FullDisplacement(u_free)
 
 
 # %% TODO's        

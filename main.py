@@ -14,8 +14,7 @@ import matplotlib.pyplot as plt
 
 import pydynsm as PDM
 
-Node = PDM.Node
-Element = PDM.Element
+
 Assembler = PDM.Assembler
 
 # %% Example
@@ -35,8 +34,6 @@ omega = 100
 ksi = 0.01 
 
 
-Node.Clear()
-Element.Clear()
 
 # %%% Create nodes from the assembler
 
@@ -77,7 +74,7 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%%% plot elements too
 
-# s1.PlotStructure(plot_elements=True)
+s1.PlotStructure(plot_elements=True)
 
 
 # %%% Add distributed load

@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from .elements import ElementFactory
+from ...elements import ElementFactory
 
 # %% class definition
 class Element:
