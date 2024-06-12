@@ -5,8 +5,12 @@ Created on Wed Jun 12 11:52:01 2024
 @author: rensv
 """
 
+# Import dependencies
 import numpy as np
+from scipy.linalg import inv
+from ...elements import ElementFactory
 
+# Class definition
 class Analysis:
     """
     A class to handle structural analysis computations such as stiffness matrices, force vectors, and displacement calculations.
@@ -19,26 +23,11 @@ class Analysis:
     def UpdateDofsDecorator(func):
         """Decorator to update constrained DOFs before method call."""
         def wrapper(self, nodes, *args, **kwargs):
-            self._UpdateConstrainedDofs(nodes)  # Update DOFs before the function call
+            
+            # TODO - write code to get the free and constrained dofs with the new method
+            
             return func(self, nodes, *args, **kwargs)
         return wrapper
-
-    def _UpdateConstrainedDofs(self, nodes):
-        """
-        Update the list of constrained DOFs based on registered nodes.
-        """
-        self.constrained_dofs.clear()
-        for node in nodes:
-            self.constrained_dofs.extend(node.constrained_dofs)
-        self._UpdateFreeDofs(nodes)
-
-    def _UpdateFreeDofs(self, nodes):
-        """
-        Update the list of free DOFs.
-        """
-        all_dofs = set(range(3 * len(nodes)))  # Assuming 2D with [x, z, phi] = 3 DOFs per node
-        constrained_indices = {dof[0] for dof in self.constrained_dofs}
-        self.free_dofs[:] = list(all_dofs - constrained_indices)
 
     def GlobalStiffness(self, nodes, elements, omega):
         """
@@ -229,3 +218,185 @@ class Analysis:
         u_full[constrained_indices] = constrained_values
         
         return u_full
+    
+    def find_unique_redundant_dofs(self, B):
+        """
+        Identifies unique and redundant degrees of freedom (DOFs) based on the constraint matrix B.
+
+        Parameters
+        ----------
+        B : numpy.ndarray
+            The constraint matrix where rows represent constraints and columns represent DOFs.
+
+        Returns
+        -------
+        unique_dofs : list of int
+            Sorted list of unique DOFs.
+        redundant_dofs : list of int
+            Sorted list of redundant DOFs.
+        """
+        num_dofs = B.shape[1]
+        redundant_dofs = set()
+        unique_dofs = set()
+
+        for row in B:
+            positives = np.where(row > 0)[0]
+            negatives = np.where(row < 0)[0]
+
+            for pos in positives:
+                unique_dofs.add(pos)
+            for neg in negatives:
+                redundant_dofs.add(neg)
+
+        # Only columns that are completely zero and not identified in negatives are truly unique
+        zero_dofs = {i for i in range(num_dofs) if np.all(B[:, i] == 0)}
+        unique_dofs = (unique_dofs | zero_dofs) - redundant_dofs
+
+        return sorted(unique_dofs), sorted(redundant_dofs)
+
+    def calculate_L(self, B, unique_dofs, redundant_dofs):
+        """
+        Calculates the transformation matrix L based on the constraint matrix B.
+
+        Parameters
+        ----------
+        B : numpy.ndarray
+            The constraint matrix where rows represent constraints and columns represent DOFs.
+        unique_dofs : list of int
+            List of unique DOFs.
+        redundant_dofs : list of int
+            List of redundant DOFs.
+
+        Returns
+        -------
+        L : numpy.ndarray
+            The transformation matrix L.
+
+        Raises
+        ------
+        ValueError
+            If the matrix B_r is singular and cannot be inverted.
+        """
+        B_r = B[:, redundant_dofs]
+        B_u = B[:, unique_dofs]
+
+        try:
+            B_r_inv = inv(B_r)
+            L_lower = -B_r_inv @ B_u
+            L = np.vstack((np.eye(len(unique_dofs)), L_lower))
+            return L
+        except np.linalg.LinAlgError:
+            raise ValueError("Matrix B_r is singular and cannot be inverted.")
+
+    def assign_dof_indices(self, nodes, elements):
+        """
+        Assigns global indices to the degrees of freedom (DOFs) of all elements.
+
+        Parameters
+        ----------
+        elements : list of Element
+            List of elements in the structural system.
+
+        Returns
+        -------
+        dof_indices : dict
+            Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+        """
+        dof_indices = {}
+        global_index = 0  # Start a global index counter for all DOFs in the system
+
+        for node in nodes:
+            for element in node.connected_elements:
+                # Initialize an entry for this node within this element
+                dof_indices[(node.id, element.id)] = {}
+                # Use the DOF configuration for this particular node (based on the node's own configuration)
+                for dof in node.dofs.keys():
+                    dof_indices[(node.id, element.id)][dof] = global_index
+                    global_index += 1  # Increment global index for each DOF
+
+        return dof_indices
+
+    def build_matrix_B(self, nodes, elements, dof_indices):
+        """
+        Builds the constraint matrix B for the structural system.
+
+        Parameters
+        ----------
+        nodes : list of Node
+            List of nodes in the structural system.
+        elements : list of Element
+            List of elements in the structural system.
+        dof_indices : dict
+            Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+
+        Returns
+        -------
+        B : numpy.ndarray
+            The constraint matrix B.
+        """
+        # Calculate the total number of DOFs
+        num_dof = sum(len(node.dofs) for element in elements for node in element.nodes )  # Dynamic count of all DOFs
+        B = np.zeros((0, num_dof))
+
+        # Enforce compatibility conditions at each node
+        for node in nodes:
+            if len(node.connected_elements) > 1:  # Only consider nodes connected to more than one element
+                # We need to handle this correctly using (node.id, element.id)
+                connected_indices = []
+                for element in node.connected_elements:
+                    if (node.id, element.id) in dof_indices:
+                        connected_indices.append((element, dof_indices[(node.id, element.id)]))
+
+                # Proceed only if there are connected elements with valid DOF indices
+                if connected_indices:
+                    # Assuming all elements have the same DOFs for nodes
+                    for dof in node.dofs.keys():
+                        all_dofs = []
+                        for element, indices in connected_indices:
+                            if dof in indices:
+                                index = indices[dof]
+                                dof_value = element.dofs[node.id][dof] # Node's DOF value from the element itself
+                                all_dofs.append((index, dof_value))
+                        
+                        # Use the first DOF as the reference for compatibility
+                        if all_dofs:
+                            primary_index, primary_value = all_dofs[0]
+                            for index, value in all_dofs[1:]:
+                                if value == primary_value:  # Enforce compatibility if values match
+                                    row = np.zeros(num_dof)
+                                    row[primary_index] = 1  # Positive sign for the primary DOF
+                                    row[index] = -1  # Negative sign for the compared DOF
+                                    B = np.vstack([B, row])  # Add this new row to the matrix B
+
+        return B
+
+    def connectivity(self, nodes, elements):
+        """
+        Computes the connectivity information for the structural system.
+
+        Parameters
+        ----------
+        nodes : list of Node
+            List of nodes in the structural system.
+        elements : list of Element
+            List of elements in the structural system.
+
+        Returns
+        -------
+        B : numpy.ndarray
+            The constraint matrix B.
+        L : numpy.ndarray
+            The transformation matrix L.
+        dof_indices : dict
+            Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+        unique_dofs : list of int
+            Sorted list of unique DOFs.
+        redundant_dofs : list of int
+            Sorted list of redundant DOFs.
+        """
+        dof_indices = self.assign_dof_indices(nodes, elements)
+        B = self.build_matrix_B(nodes, elements, dof_indices)
+        unique_dofs, redundant_dofs = self.find_unique_redundant_dofs(B)
+        L = self.calculate_L(B, unique_dofs, redundant_dofs)
+
+        return B, L, dof_indices, unique_dofs, redundant_dofs

@@ -11,158 +11,171 @@ import numpy as np
 # %% class definition
 class Node:
     """
-    The Node class is used to store node information and keep track of the total number of 
-    Degrees of Freedom (DOFs) of the problem. It introduces automatic bookkeeping in its 
-    initialization, which efficiently keeps track of which DOFs belong to which nodes. This 
-    makes it easier to assemble matrices from multiple elements.
+    A class to represent a node in a structural system.
 
-    Attributes:
-        x (float): The x-coordinate of the node.
-        z (float): The z-coordinate of the node.
-        p (numpy.array):  The load vector of the node.
-        dofs (list): The Degrees of Freedom associated with the node.
-
-    Methods:
-        clear(): Clears the counting of degrees of freedom and number of nodes.
-        __init__(x, z): The constructor for Node class.
-        add_load(p): Adds the given loads to the node.
-        get_coords(): Returns the coordinates of the node.
-        __str__(): Returns a string representation of the node.
+    Attributes
+    ----------
+    nn : int
+        Class variable to count the number of nodes.
+    dof_configurations : dict
+        Dictionary containing DOF configurations for different node types.
+    x : float
+        x-coordinate of the node.
+    z : float
+        z-coordinate of the node.
+    y : float
+        y-coordinate of the node, applicable for 3D configurations.
+    config : str
+        Configuration type of the node (e.g., '2D', '3D', '2D_torsion').
+    dofs : dict
+        Dictionary of degrees of freedom for the node with DOF names as keys and their statuses as values.
+    nodal_forces : list
+        List to store forces applied to the node.
+    id : int
+        Unique identifier for the node.
+    connected_elements : list
+        List of elements connected to this node.
     """
     
-    # determine class variables shared through all instances of the Node class
-    ndof = 0
+    # initialise number of nodes (nn) as class-variable, to be updated by every new class object
     nn   = 0
-    constrained_dofs_global = []
     
-    # mapping of dofs
-    dof_map = {'x': 0, 'z': 1, 'phi': 2}
+    # Node configurations are ordered as: 'Name': [['linear dofs'],['rotational dofs']]. Linear dofs also define the amount of coordinates we can assign (thus 2D or 3D basically)
+    dof_configurations = {
+        '2D': [['x', 'z'],['phi_y']],
+        '3D': [['x', 'z', 'y'], ['phi_x', 'phi_z', 'phi_y']],
+        '2D_torsion': [['x', 'z'], ['phi_x', 'phi_y']] 
+        }
     
-    def Clear():
+    def __init__(self,x,z,y=0,config='2D', dof_config=None):
         """
-        Clears the counting of degrees of freedom and number of nodes.
+        Initializes the Node with its coordinates and DOF configuration.
 
-        This method resets the class-level counters for degrees of freedom and number of nodes. 
-        It should be used when you want to start a new problem from scratch.
-        """
-        Node.ndof = 0
-        Node.nn = 0
-        Node.constrained_dofs_global.clear()
-        
-    def __init__(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False): 
-        """
-        The constructor for Node class.
-
-        Parameters:
-            x (float):        The x-coordinate of the node.
-            z (float):        The z-coordinate of the node.
-            p (numpy.array):  The load vector of the node.
-            dofs (list):      The Degrees of Freedom (u (in direction of x), w (in direction of z), phi (from z to x)) associated with the node.
+        Parameters
+        ----------
+        x : float
+            x-coordinate of the node.
+        z : float
+            z-coordinate of the node.
+        y : float, optional
+            y-coordinate of the node, default is 0 (for 2D configurations).
+        config : str, optional
+            Configuration type of the node, default is '2D'.
         """
         
+        # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
+        self.config = config
+        # Load any default dof_config or apply custom one SHOULD THINK WHETHER THIS IS USEFULL OR JUST LEAVE IT FULLY AUTOMATIC BASED ON APPLIED SECTIONS
+        self.dof_config = dof_config if dof_config else self.dof_configurations[config]
+        # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
+        self.dofs = {dof: None for dof_list in self.dof_configurations[config] for dof in dof_list}
+
         # location in space
         self.x     = x
         self.z     = z
+        self.y     = y
         
         # initialise empty forces lists
-        self.nodal_forces     = []
-        
-        # numbers of dofs [x,z,phi]
-        self.dofs  = [Node.ndof, Node.ndof+1, Node.ndof+2]
-        
-        # empty list with the fixed / prescribed dofs and their values: [[dof1, value], [dof2, value]] - if fixed -> value = 0
-        self.constrained_dofs = []        
-        
-        
-        # check whether node is being initialised with some fixation
-        if x_fixed:
-            self.FixDof('x')
-        if z_fixed:
-            self.FixDof('z')
-        if phi_fixed:
-            self.FixDof('phi')
-        
-        # increment the class variables
-        Node.ndof += 3
-        Node.nn   += 1
+        self.nodal_forces = []
         
         # node name
-        self.name = f"Node {Node.nn}"
+        self.id = Node.nn
         
-    def AddLoad(self, p):
-        """
-        Adds the given loads to the node.
+        # empty connected_elements list
+        self.connected_elements = []
+        
+        # increment the class variables
+        Node.nn   += 1
 
-        The load is a vector p, which includes the load in the x and y direction and a moment. 
-        These loads are added to the existing loads of the node.
-
-        Parameters:
-            p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
-                             and the moment. 
+    def update_element_dof(self,changes=None):
         """
-        self.nodal_forces.append(p)
+        Updates the DOFs of connected elements based on changes in the node's DOFs.
 
-    def GetCoords(self):
+        Parameters
+        ----------
+        changes : dict, optional
+            Dictionary of changes in DOFs, default is None.
         """
-        Returns the coordinates of the node.
+        if changes:
+            for element in self.connected_elements:
+                element.update_node_dofs(self,changes)            
 
-        Returns:
-           numpy.array: An array containing the x and z coordinates of the node.
+    def connect_element(self, element):
         """
-        return np.array([self.x, self.z])
+        Connects an element to this node.
+
+        Parameters
+        ----------
+        element : Element
+            The element to be connected to this node.
+        """
+        if element not in self.connected_elements:
+            self.connected_elements.append(element)
+            
+    def fix_node(self, *dofs):
+        """
+        Fixes specified DOFs of the node to zero.
+
+        Parameters
+        ----------
+        *dofs : str
+            DOFs to be fixed.
+        """
     
-    def FixDofs(self, *args):
+        self.prescribe_node(**{dof: 0 for dof in dofs})
+        
+    def free_node(self, *dofs):
         """
-        Fixes specific degrees of freedom for this node, with given values or default.
-    
-        Parameters:
-        *args: A mix of strings and tuples, where strings represent the DOF to be fixed with 
-               a default value, and tuples represent the DOF and its specific value to be fixed.
-        """
-        for arg in args:
-            if isinstance(arg, str):  # Single DOF that is fixed, value = 0
-                dof = arg
-                value = 0  # Default value
-                self.FixDof(dof, value)
-            elif isinstance(arg, list) and len(arg) == 2: # if is list and len = 2, then use value (prescribed dof)
-                dof, value = arg
-                self.FixDof(dof, value)
-            else:
-                raise ValueError("Invalid argument format. Use 'dof' or ('dof', value).")
-    
-    def FixDof(self, dof, value):
-        """
-        Helper method to fix a single degree of freedom with a given value.
-    
-        Parameters:
-        dof (str): The identifier of the degree of freedom to be fixed ('x', 'z', or 'phi').
-        value (float): The value to fix the degree of freedom to.
-        """
-        if dof in Node.dof_map:
-            dof_index = self.dofs[Node.dof_map[dof]]
-            if (dof_index, value) not in Node.constrained_dofs_global:
-                Node.constrained_dofs_global.append([dof_index, value])
-                self.constrained_dofs.append([dof_index, value])
-                print(f"DOF {dof} for node at ({self.x}, {self.z}) is now fixed with value {value}.")
-            else:
-                print(f"DOF {dof} for node at ({self.x}, {self.z}) is already fixed.")
-        else:
-            raise ValueError(f"Invalid DOF '{dof}'. Please use 'x', 'z', or 'phi'.")
+        Frees specified DOFs of the node (sets them to None).
 
-    def FixNode(self):
-        """
-        Constrain all degrees of freedom for this node.
-        """
-        self.FixDofs('x', 'z', 'phi')
-
-    def __str__(self):
-        """
-        Returns a string representation of the node.
-
-        Returns:
-            str: A string representation of the node.
+        Parameters
+        ----------
+        *dofs : str
+            DOFs to be freed.
         """
         
-        # TODO - UPDATE WHAT IT SHOULD RETURN
+        self.prescribe_node(**{dof: None for dof in dofs})
+       
+    def prescribe_node(self, **dofs):
+        """
+        Sets specified DOFs of the node to given values.
+
+        Parameters
+        ----------
+        **dofs : dict
+            DOFs to be prescribed with their values.
         
-        return f"This node has:\n - x coordinate={self.x},\n - z coordinate={self.z},\n - degrees of freedom={self.dofs},\n - load vector={self.p})"
+        Raises
+        ------
+        ValueError
+            If any of the specified DOFs are not in the current configuration.
+        """
+        changes = {}
+        try:
+            for dof, value in dofs.items():
+                if dof not in self.dofs:
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                if self.dofs[dof] != value:
+                    self.dofs[dof] = value
+                    changes[dof] = value
+        except ValueError as e:
+            print(e)
+            return
+        
+        if changes:
+            for element in self.connected_elements:
+                element.update_node_dofs(self,changes)
+    
+    def get_coords(self):
+        """
+        Returns the coordinates of the node based on its DOF configuration.
+
+        Returns
+        -------
+        tuple
+            Coordinates of the node (x, z, y) if applicable.
+        """
+        coords = [self.x, self.z]
+        if 'y' in self.dof_configurations[self.config][0]:
+            coords.append(self.y)
+        return tuple(coords)

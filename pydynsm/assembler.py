@@ -6,15 +6,11 @@ Created on Tue Mar 12 19:21:45 2024
 """
 
 # %% import dependencies
-import numpy as np
-import matplotlib.pyplot as plt
+
 
 # %% import others
 
 from . import plotter
-# from .node import Node
-# from .element import Element
-# import analysis types
 from .analysis import analysis_old
 from .analysis import analysis_new
 # %% main class definition
@@ -31,10 +27,7 @@ class Assembler:
         self.elements = []  # Empty elements list
         
         self.nodes = []  # Empty nodes list
-        
-        self.constrained_dofs = [] # Stores lists of [DOF index, value]
-        self.free_dofs = [] # stores the free dofs
-        
+       
         
         # load dependencies that are injected
         self.StructurePlotter = plotter.StructurePlotter()
