@@ -16,19 +16,6 @@ class Analysis:
     A class to handle structural analysis computations such as stiffness matrices, force vectors, and displacement calculations.
     """
 
-    def __init__(self):
-        self.constrained_dofs = []
-        self.free_dofs = []
-
-    def UpdateDofsDecorator(func):
-        """Decorator to update constrained DOFs before method call."""
-        def wrapper(self, nodes, *args, **kwargs):
-            
-            # TODO - write code to get the free and constrained dofs with the new method
-            
-            return func(self, nodes, *args, **kwargs)
-        return wrapper
-
     def GlobalStiffness(self, nodes, elements, omega):
         """
         Assembles the global unconstrained stiffness matrix.
@@ -99,7 +86,6 @@ class Analysis:
             
         return f_global
 
-    @UpdateDofsDecorator
     def GlobalConstrainedStiffness(self, nodes, elements, omega):
         """
         Constrains the global stiffness matrix.
@@ -121,7 +107,6 @@ class Analysis:
         k_global = self.GlobalStiffness(nodes, elements, omega)
         return k_global[np.ix_(self.free_dofs, self.free_dofs)]
 
-    @UpdateDofsDecorator
     def GlobalConstrainedForce(self, nodes, elements, omega):
         """
         Constrains the global force vector.
@@ -218,7 +203,9 @@ class Analysis:
         u_full[constrained_indices] = constrained_values
         
         return u_full
-    
+
+# %% specific methods for this method of analysis
+
     def find_unique_redundant_dofs(self, B):
         """
         Identifies unique and redundant degrees of freedom (DOFs) based on the constraint matrix B.
@@ -349,6 +336,7 @@ class Analysis:
 
                 # Proceed only if there are connected elements with valid DOF indices
                 if connected_indices:
+                    # TODO - CHANGE SUCH THAT THE ASSUMPTION IS NOT TAKEN AND WE CHECK PER ELEMENT AT THE SPECIFIC NODE
                     # Assuming all elements have the same DOFs for nodes
                     for dof in node.dofs.keys():
                         all_dofs = []
@@ -393,10 +381,62 @@ class Analysis:
             Sorted list of unique DOFs.
         redundant_dofs : list of int
             Sorted list of redundant DOFs.
+        free_dofs: list
+            List of indices in `unique_dofs` that are free.
+        constrained_dofs: list
+            List of lists where each sublist contains a DOF index and its value.
         """
+        
         dof_indices = self.assign_dof_indices(nodes, elements)
-        B = self.build_matrix_B(nodes, elements, dof_indices)
-        unique_dofs, redundant_dofs = self.find_unique_redundant_dofs(B)
-        L = self.calculate_L(B, unique_dofs, redundant_dofs)
+        
+        self.B = self.build_matrix_B(nodes, elements, dof_indices)
+        
+        unique_dofs, redundant_dofs = self.find_unique_redundant_dofs(self.B)
+        
+        self.L = self.calculate_L(self.B, unique_dofs, redundant_dofs)
+        
+        self.free_dofs, self.constrained_dofs = self.classify_free_constrained_dofs(nodes, unique_dofs, dof_indices)
+        
+        
 
-        return B, L, dof_indices, unique_dofs, redundant_dofs
+    def classify_free_constrained_dofs(self, nodes, unique_dofs, dof_indices):
+        """
+        Classifies unique DOFs as free or constrained (fixed or prescribed) and extracts their indices.
+        
+        Parameters
+        --------
+        nodes: list of Node
+            List of all nodes.
+        unique_dofs: list
+            List of indices considered unique.
+        dof_indices: dict
+            Maps (node_id, element_id) to a dict of DOFs and their indices.
+        
+        Returns
+        -------
+        free_dofs: list
+            List of indices in `unique_dofs` that are free.
+        constrained_dofs: list
+            List of lists where each sublist contains a DOF index and its value.
+        """
+        reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
+        
+        free_dofs = []
+        constrained_dofs = []
+
+        for index, dof_index in enumerate(unique_dofs):
+            if dof_index not in reverse_dof_lookup:
+                continue  # Skip if no matching node-dof pair is found
+            node_id, dof_name = reverse_dof_lookup[dof_index]
+            node = next((n for n in nodes if n.id == node_id), None)
+            
+            if not node:
+                continue  # Skip if no node is found
+            
+            dof_value = node.dofs[dof_name]
+            if dof_value is None:
+                free_dofs.append(index)
+            else:
+                constrained_dofs.append([index, dof_value])
+
+        return free_dofs, constrained_dofs

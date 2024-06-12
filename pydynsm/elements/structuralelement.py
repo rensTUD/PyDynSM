@@ -108,7 +108,11 @@ class ElementFactory:
     def CreateElement(cls, element_name, **kwargs):
         """
         Create an instance of an element by name. If the element type is not found,
-        raise a ValueError with a message listing available element types.
+        
+        Raises
+        ------
+        ValueError 
+            with a message listing available element types.
         """
         if element_name not in cls.elements:
             available_types = ", ".join(cls.elements.keys())

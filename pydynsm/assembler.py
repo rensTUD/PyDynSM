@@ -17,7 +17,7 @@ from .analysis import analysis_new
 
 class Assembler:
         
-    def __init__(self, name, analysis_type = analysis_old):
+    def __init__(self, name, analysis_type = 'old'):
         '''
         Initialisation of assembler.
         '''
@@ -31,10 +31,15 @@ class Assembler:
         
         # load dependencies that are injected
         self.StructurePlotter = plotter.StructurePlotter()
+        if analysis_type == 'old':
+            analysis_type = analysis_old
+        elif analysis_type == 'new':
+            analysis_type = analysis_new
+            
         self.Node = analysis_type.Node
         self.Element = analysis_type.Element
         self.Analysis = analysis_type.Analysis()
-        
+            
         print(f"Assembler '{self.name}' successfully initialised")
 
     
@@ -47,9 +52,9 @@ class Assembler:
         if node not in self.nodes:
             self.nodes.append(node)          # add node to list
     
-    def CreateNode(self, x, z, x_fixed=False, z_fixed=False, phi_fixed=False):
+    def CreateNode(self, *args, **kwargs):
         """Creates a node and registers it automatically with the assembler."""
-        new_node = self.Node(x, z, x_fixed=x_fixed, z_fixed=z_fixed, phi_fixed=phi_fixed)
+        new_node = self.Node(*args, **kwargs)
         self.RegisterNode(new_node)
         return new_node        
 

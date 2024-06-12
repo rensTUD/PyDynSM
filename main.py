@@ -21,7 +21,7 @@ Assembler = PDM.Assembler
 
 # %%% Initialise an assembler with your project name
 
-s1 = Assembler('beam')
+s1 = Assembler('beam',analysis_type='new')
 
 # %%% Parameters
 EA = 7e6
@@ -39,11 +39,11 @@ ksi = 0.01
 
 
 node1 = s1.CreateNode(0,0)
-node2 = s1.CreateNode(L,0)
+node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
 
 # %%% Now set the constraints directly onto the nodes
-node1.FixDofs('x', 'z')
-node2.FixDofs('z')
+node1.fix_node('x', 'z')
+node2.fix_node('z')
 
 # %%%% test adding a load to the node
 
@@ -74,7 +74,7 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 # %%%% plot elements too
 
-s1.PlotStructure(plot_elements=True)
+# s1.PlotStructure(plot_elements=True)
 
 
 # %%% Add distributed load
