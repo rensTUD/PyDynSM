@@ -13,11 +13,23 @@ from .structuralelement import StructuralElement, ElementFactory
 
 @ElementFactory.ElementType('Tensioned EulerBernoulli Beam')
 class TensionedEulerBernoulliBeam(StructuralElement):
+    """Class for Euler-Bernoulli beam with tension."""
 
     element_name = 'Tensioned EulerBernoulli Beam'
 
     def __init__(self, rho, A, E, Ib, L, T, ksi=None):
+        """
+        Initialise TensionedEulerBernoulliBeam class.
 
+        Input:
+            rho : value. Density of element [kg/m^3]
+            A   : value. Area of cross section [m^2]
+            E   : value. Young's modulus [Pa]
+            Ib  : value. Cross-sectional inertia [m^4]
+            L   : value. Length of the element [m]
+            T   : value. Tension applied to beam [N]
+            ksi : value. Material damping [-], default: none
+        """
         # define what dofs the eb beam contributes to and initialise
         dofs = [1, 2]
         super().__init__(dofs)
@@ -33,8 +45,9 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         self.ksi = ksi if ksi is not None else 0.01
 
     def local_stiffness(self, omega):
-        '''
-        Determines the stiffness of the EB-beam.
+        """
+        Determine the stiffness of the tensioned EB-beam.
+
         As its 2D, stiffness will be 4x4 matrix as:
             [V_left, M_left, V_right, M_right] =
             K.[w_left, phi_left, w_right, phi_right]
@@ -45,7 +58,7 @@ class TensionedEulerBernoulliBeam(StructuralElement):
             omega: array. Range of frequencies of analysis
         Output:
             K_local: matrix. Dynamic stiffness matrix (also K_dyn)
-        '''
+        """
         # Assign local variables for ease of coding
         E = self.E
         Ib = self.Ib
@@ -59,7 +72,7 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         # Copy-paste the matrix directly from Maple (also called K_dyn)
         K_local = np.array([[1j*E*Ib*(alpha_3*alpha_4*(alpha_3 - alpha_4)*(alpha_3 + alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_2*alpha_4*(alpha_2 - alpha_4)*(alpha_2 + alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_2 + alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_4*(alpha_1 - alpha_4)*(alpha_1 + alpha_4)*(alpha_2 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_3)) - alpha_3*(alpha_1 - alpha_3)*(alpha_1 + alpha_3)*(alpha_2 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_2*(alpha_1 - alpha_2)*(alpha_1 + alpha_2)*(alpha_3 - alpha_4))*alpha_1)/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)),
                              ((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*(E*Ib*alpha_3**2 + E*Ib*alpha_3*alpha_4 + E*Ib*alpha_4**2 + T)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*(E*Ib*alpha_2**2 + E*Ib*alpha_2*alpha_4 + E*Ib*alpha_4**2 + T)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*(E*Ib*alpha_2**2 + E*Ib*alpha_2*alpha_3 + E*Ib*alpha_3**2 + T)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*(E*Ib*alpha_1**2 + E*Ib*alpha_1*alpha_4 + E*Ib*alpha_4**2 + T)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*(E*Ib*alpha_1**2 + E*Ib*alpha_1*alpha_3 + E*Ib*alpha_3**2 + T)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)*(E*Ib*alpha_1**2 + E*Ib*alpha_1*alpha_2 + E*Ib*alpha_2**2 + T))/(-(alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) + (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) - (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) - (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) + (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) - np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)),
-                             -1j*E*Ib*(alpha_1*(alpha_3 - alpha_4)*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*(alpha_2 + alpha_3 + alpha_4)*np.exp(-1j*alpha_1*L) - alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*(alpha_1 + alpha_3 + alpha_4)*np.exp(-1j*alpha_2*L) + (alpha_1 - alpha_2)*(alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 + alpha_2 + alpha_4)*np.exp(-1j*alpha_3*L) - np.exp(-1j*alpha_4*L)*alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 + alpha_2 + alpha_3)))/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)), 
+                             -1j*E*Ib*(alpha_1*(alpha_3 - alpha_4)*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*(alpha_2 + alpha_3 + alpha_4)*np.exp(-1j*alpha_1*L) - alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*(alpha_1 + alpha_3 + alpha_4)*np.exp(-1j*alpha_2*L) + (alpha_1 - alpha_2)*(alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 + alpha_2 + alpha_4)*np.exp(-1j*alpha_3*L) - np.exp(-1j*alpha_4*L)*alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 + alpha_2 + alpha_3)))/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)),
                              ((alpha_3 - alpha_4)*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*(alpha_2 + alpha_3 + alpha_4)*np.exp(-1j*alpha_1*L) - (alpha_3 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*(alpha_1 + alpha_3 + alpha_4)*np.exp(-1j*alpha_2*L) + ((alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 + alpha_2 + alpha_4)*np.exp(-1j*alpha_3*L) - np.exp(-1j*alpha_4*L)*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 + alpha_2 + alpha_3))*(alpha_1 - alpha_2))*E*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))],
                             [(alpha_3*alpha_4*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_2*alpha_4*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + alpha_1*(alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)))*E*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)),
                              1j*((alpha_3 - alpha_4)*(alpha_3 + alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_2 + alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_2 + alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_1 - alpha_4)*(alpha_1 + alpha_4)*(alpha_2 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_1 - alpha_3)*(alpha_1 + alpha_3)*(alpha_2 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_1 - alpha_2)*(alpha_1 + alpha_2)*(alpha_3 - alpha_4))*E*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)),
@@ -77,13 +90,14 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         return K_local
 
     def element_wavenumbers(self, omega):
-        '''
-        Determines the wavenumbers of EulerBernoulli beam
+        """
+        Determine the wavenumbers of tensioned EulerBernoulli beam.
+
         Input:
             omega: array. Range of frequencies of analysis.
         Output:
             alpha_1, alpha_2, alpha_3, alpha_4: values. Wavenumbers
-        '''
+        """
         E = self.E
         Ib = self.Ib
         A = self.A
@@ -99,14 +113,16 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         return alpha_1, alpha_2, alpha_3, alpha_4
 
     def local_distributed_load(self, q, omega):
-        '''
-        Add a distributed load to the local element
+        """
+        Add a distributed load to the local element.
+
         Input:
             q: array. Distributed load. With a shape such as:
             q = [q_z, q_phi]
             omega: array. Range of frequencies of analyis
         Output:
-        '''
+            el: array. Force vector
+        """
         # assign load to itself to keep track
         self.q = q
 
@@ -130,11 +146,10 @@ class TensionedEulerBernoulliBeam(StructuralElement):
 
         return el
 
-
     def local_element_displacements(self, u_nodes_global, omega, num_points):
-        '''
-        This function calculates the coefficients C, local displacements w(s)
-        and rotational displacement phi(s).
+        """
+        Calculate local displacements w(s) and rotational displacements phi(s).
+
         Input:
             u_nodes_global: array. The nodes in global coordinates
             omega: array. Range of frequencies of analysis
@@ -142,7 +157,7 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         Output:
             w: array. Amplitude of vertical displacement
             phi: array. Amplitude of rotational displacement
-        '''
+        """
         # get local axis to evaluate on
         L = self.L
         x = np.linspace(0.0, L, num_points)
@@ -165,14 +180,15 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         return [w, phi]
 
     def coefficients(self, u_node_local, omega):
-        '''
-        Calculates the coefficients of the general solution, in this case 4
+        """
+        Calculate the coefficients of the general solution, in this case 4.
+
         Input:
             u_node_local: local degrees of freedom
             omega: array. Range of frequencies of analysis
         Output:
             C: array (4), coefficients of general solution (C1, C2, C3, C4)
-        '''
+        """
         # read all the variables
         rho = self.rho
         A = self.A
@@ -180,8 +196,6 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         Ib = self.Ib
         L = self.L
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
-
-        # TODO - should change this based on new derivations..
 
         # get distributed load value
         q = self.q[1]
@@ -205,24 +219,23 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         return C
 
     def displacement(self, x, omega, C=None, u_node_local=None):
-        '''
-        Gets the transverse displacments of the Tensioned Euler-Bernoulli beam
+        """
+        Get the transverse displacments of the tensioned EB beam.
 
-        if C is not given, then calculate it based on u_node_local.
-        '''
-
-        # TODO - should change this based on new derivations..
-
-        ksi = self.ksi
-        E = self.E
-        Ib = self.Ib
-        EI = E*Ib*(1 + 2j * ksi)
-        T = self.T
-        q = self.q[1]
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            w: array. Transverse displacements
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
@@ -234,21 +247,23 @@ class TensionedEulerBernoulliBeam(StructuralElement):
         return w
 
     def rotation(self, x, omega, C=None, u_node_local=None):
-        '''
-        Gets the rotations of the Euler-Bernoulli beam
-        '''
+        """
+        Get the rotational displacments of the tensioned EB beam.
 
-        # TODO - should change this based on new derivations..
-
-        ksi = self.ksi
-        E = self.E
-        Ib = self.Ib
-        A = self.A
-        q = self.q[1]
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            phi: array. Rotational displacements
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # rotations

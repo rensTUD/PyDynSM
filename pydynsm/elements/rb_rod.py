@@ -13,11 +13,14 @@ from .structuralelement import StructuralElement, ElementFactory
 
 @ElementFactory.ElementType('Rayleigh-Bishop Rod')
 class RayleighBishopRod(StructuralElement):
+    """Class for Rayleigh-Bishop rod element."""
 
     element_name = 'Rayleigh-Bishop Rod'
 
     def __init__(self, rho, A, E, Ir, L, nu, G, ksi=None):
         """
+        Initialise Rayleigh-Bishop Rod.
+
         Input:
             rho: value. Density of the element's material [kg/m^3]
             A:   value. Area of the element [m^2]
@@ -25,6 +28,7 @@ class RayleighBishopRod(StructuralElement):
             Ir:  value. Cross-sectional moment of inertia of the element [m^4]
             L:   value. Length of element [m]
             nu:  value. Poisson's ratio [-]
+            G:   value. Shear modulus of the element [Pa]
             ksi: value. Damping of the element's material [-]
         """
         # define what dofs the RB rod contributes to and initialise
@@ -44,8 +48,9 @@ class RayleighBishopRod(StructuralElement):
         self.ksi = ksi if ksi is not None else 0.01
 
     def local_stiffness(self, omega):
-        '''
-        Determines the stiffness of the RB-rod.
+        """
+        Determine the stiffness of the RB-rod.
+
         As its 2D, stiffness will be 4x4 matrix as:
             [V_left, M_left, V_right, M_right] =
             K.[w_left, phi_left, w_right, phi_right]
@@ -56,8 +61,7 @@ class RayleighBishopRod(StructuralElement):
             omega: array. Range of frequencies of analysis
         Output:
             K_local: matrix. Dynamic stiffness matrix (also K_dyn)
-        '''
-
+        """
         # Assign local variables for ease of coding
         rho = self.rho
         A = self.A
@@ -92,20 +96,23 @@ class RayleighBishopRod(StructuralElement):
         return K_local
 
     def element_wavenumbers(self, omega):
-        '''
-        Determines the wavenumbers of Rayleigh-Bishop rod
+        """
+        Determine the wavenumbers of Rayleigh-Bishop rod.
+
         Input:
             omega: array. Range of frequencies of analysis.
         Output:
             alpha_1, alpha_2, alpha_3, alpha_4: values. Wavenumbers
-        '''
+            2 DoF element, so 4x4 matrix and 4 wavenumbers
+        """
         rho = self.rho
         A = self.A
         E = self.E
         Ir = self.Ir
         nu = self.nu
         G = self.G
-
+        # Copy-paste from Maple document of Wavenumbers
+        # 4th-order derivative in x, so 4 wavenumbers
         alpha_1 = 1/G/Ir/nu*np.sqrt(-2*G*Ir*(-Ir*nu**2*omega**2*rho + A*E - np.sqrt(Ir**2*nu**4*omega**4*rho**2 - 2*A*E*Ir*nu**2*omega**2*rho + 4*A*G*Ir*nu**2*omega**2*rho + A**2*E**2)))/2
         alpha_2 = -1/G/Ir/nu*np.sqrt(-2*G*Ir*(-Ir*nu**2*omega**2*rho + A*E - np.sqrt(Ir**2*nu**4*omega**4*rho**2 - 2*A*E*Ir*nu**2*omega**2*rho + 4*A*G*Ir*nu**2*omega**2*rho + A**2*E**2)))/2
         alpha_3 = 1/G/Ir/nu*np.sqrt(-2*G*Ir*(-Ir*nu**2*omega**2*rho + A*E + np.sqrt(Ir**2*nu**4*omega**4*rho**2 - 2*A*E*Ir*nu**2*omega**2*rho + 4*A*G*Ir*nu**2*omega**2*rho + A**2*E**2)))/2
@@ -114,14 +121,16 @@ class RayleighBishopRod(StructuralElement):
         return alpha_1, alpha_2, alpha_3, alpha_4
 
     def local_distributed_load(self, q, omega):
-        '''
-        Add a distributed load to the local element
+        """
+        Add a distributed load to the local element.
+
         Input:
-            q: array. Distributed load. With a shape such as:
+            q:     array. Distributed load. With a shape such as:
             q = [q_z, q_theta] (kind of torsion)
             omega: array. Range of frequencies of analyis
         Output:
-        '''
+            el:    array. Force vector
+        """
         # assign load to itself to keep track
         self.q = q
 
@@ -149,9 +158,9 @@ class RayleighBishopRod(StructuralElement):
         return el
 
     def local_element_displacements(self, u_nodes_global, omega, num_points):
-        '''
-        This function calculates the coefficients C, local displacements w(s)
-        and rotational displacement phi(s).
+        """
+        Calculate local displacements w(s) and rotational displacement phi(s).
+
         Input:
             u_nodes_global: array. The nodes in global coordinates
             omega: array. Range of frequencies of analysis
@@ -159,8 +168,7 @@ class RayleighBishopRod(StructuralElement):
         Output:
             w: array. Amplitude of vertical displacement
             phi: array. Amplitude of rotational displacement
-        '''
-
+        """
         # get local axis to evaluate on
         L = self.L
         x = np.linspace(0.0, L, num_points)
@@ -183,22 +191,19 @@ class RayleighBishopRod(StructuralElement):
         return [u, phi]
 
     def coefficients(self, u_node_local, omega):
-        '''
-        Calculates the coefficients of the general solution, in this case 4
+        """
+        Calculate the coefficients of the general solution, in this case 4.
+
         Input:
             u_node_local: local degrees of freedom
             omega: array. Range of frequencies of analysis
         Output:
             C: array (4), coefficients of general solution (C1, C2, C3, C4)
-        '''
+        """
         # read all the variables
         rho = self.rho
         A = self.A
-        E = self.E
-        Ir = self.Ir
         L = self.L
-        nu = self.nu
-        G = self.G
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # get distributed load value
@@ -207,6 +212,7 @@ class RayleighBishopRod(StructuralElement):
         # q_b, q_m = self.
 
         # calculate the coefficients with A_mat copy-pasted from Maple
+        # 4x4 beacuse 4th-order EOM
         A_mat = np.array([[1, 1, 1, 1],
                           [-1j*alpha_1, -1j*alpha_2, -1j*alpha_3, -1j*alpha_4],
                           [np.exp(-1j*alpha_1*L), np.exp(-1j*alpha_2*L),
@@ -224,7 +230,8 @@ class RayleighBishopRod(StructuralElement):
 
     def displacement(self, x, omega, C=None, u_node_local=None):
         """
-        Gets the transverse displacments of the Rayleigh-Bishop rod
+        Get the transverse displacments of the Rayleigh-Bishop rod.
+
         Input:
             x: array. Points along element
             omega: array. Range of frequencies of analysis
@@ -235,11 +242,10 @@ class RayleighBishopRod(StructuralElement):
         Note:
             if C is not given, then calculate it based on u_node_local.
         """
-
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
@@ -248,11 +254,12 @@ class RayleighBishopRod(StructuralElement):
              C[2]*np.exp(-1j*alpha_3*x) +
              C[3]*np.exp(-1j*alpha_4*x))
 
-        return u
+        return [u]
 
     def rotation(self, x, omega, C=None, u_node_local=None):
-        '''
-        Gets the rotations of the Rayleigh-Bishop rod
+        """
+        Get the rotations of the Rayleigh-Bishop rod.
+
         Input:
             x: array. Points along element
             omega: array. Range of frequencies of analysis
@@ -262,12 +269,11 @@ class RayleighBishopRod(StructuralElement):
             w: array. Transverse displacements
         Note:
             if C is not given, then calculate it based on u_node_local.
-        '''
-
+        """
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements

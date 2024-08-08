@@ -13,11 +13,14 @@ from .structuralelement import StructuralElement, ElementFactory
 
 @ElementFactory.ElementType('Rayleigh Beam')
 class RayleighBeam(StructuralElement):
+    """Class for Rayleigh beam."""
 
     element_name = 'Rayleigh Beam'
 
     def __init__(self, rho, A, E, Ib, L, ksi=None):
         """
+        Initialise RayleighBeam class.
+
         Input:
             rho: value. Density of the element's material [kg/m^3]
             A:   value. Area of the element [m^2]
@@ -41,8 +44,9 @@ class RayleighBeam(StructuralElement):
         self.ksi = ksi if ksi is not None else 0.01
 
     def local_stiffness(self, omega):
-        '''
-        Determines the stiffness of the beam.
+        """
+        Determine the stiffness of the beam.
+
         As its 2D, stiffness will be 4x4 matrix as:
             [V_left, M_left, V_right, M_right] =
             K.[w_left, phi_left, w_right, phi_right]
@@ -53,8 +57,7 @@ class RayleighBeam(StructuralElement):
             omega: array. Range of frequencies of analysis
         Output:
             K_local: matrix. Dynamic stiffness matrix (also K_dyn)
-        '''
-
+        """
         # Assign local variables for ease of coding
         rho = self.rho
         E = self.E
@@ -86,13 +89,14 @@ class RayleighBeam(StructuralElement):
         return K_local
 
     def element_wavenumbers(self, omega):
-        '''
-        Determines the wavenumbers of Rayleigh beam
+        """
+        Determine the wavenumbers of Rayleigh beam.
+
         Input:
             omega: array. Range of frequencies of analysis.
         Output:
             alpha_1, alpha_2, alpha_3, alpha_4: values. Wavenumbers
-        '''
+        """
         rho = self.rho
         A = self.A
         E = self.E
@@ -107,15 +111,16 @@ class RayleighBeam(StructuralElement):
         return alpha_1, alpha_2, alpha_3, alpha_4
 
     def local_distributed_loads(self, q, omega):
-        # TODO - change of this element
-        '''
-        add a distributed load to the local element
+        """
+        Add a distributed load to the local element.
 
-        q = [q_z;
-             q_phi]
-
-        '''
-
+        Input:
+            q: array. Distributed load. With a shape such as:
+            q = [q_z, q_phi]
+            omega: array. Range of frequencies of analyis
+        Output:
+            el: array. Force vector
+        """
         # assign load to itself to keep track
         self.q = q
 
@@ -141,9 +146,9 @@ class RayleighBeam(StructuralElement):
         return el  
 
     def local_element_displacements(self, u_nodes_global, omega, num_points):
-        '''
-        This function calculates the coefficients C, local displacements w(s)
-        and rotational displacement phi(s).
+        """
+        Calculate local tranlsational w(s) and rotational displacement phi(s).
+
         Input:
             u_nodes_global: array. The nodes in global coordinates
             omega: array. Range of frequencies of analysis
@@ -151,8 +156,7 @@ class RayleighBeam(StructuralElement):
         Output:
             w: array. Amplitude of vertical displacement
             phi: array. Amplitude of rotational displacement
-        '''
-
+        """
         # get local axis to evaluate on
         L = self.L
         x = np.linspace(0.0, L, num_points)
@@ -175,14 +179,15 @@ class RayleighBeam(StructuralElement):
         return [w, phi]
 
     def coefficients(self, u_node_local, omega):
-        '''
-        Calculates the coefficients of the general solution, in this case 4
+        """
+        Calculate the coefficients of the general solution, in this case 4.
+
         Input:
             u_node_local: local degrees of freedom
             omega: array. Range of frequencies of analysis
         Output:
             C: array (4), coefficients of general solution (C1, C2, C3, C4)
-        '''
+        """
         # Read all the variables
         L = self.L
         rho = self.who
@@ -190,7 +195,6 @@ class RayleighBeam(StructuralElement):
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # get distributed load value
-        # TODO - update to this model
         q = self.q[1]
         # should be like:
         # q_b, q_m = self.
@@ -205,14 +209,15 @@ class RayleighBeam(StructuralElement):
                            1j*np.exp(-1j*alpha_3*L)*alpha_3,
                            1j*np.exp(-1j*alpha_4*L)*alpha_4]])
 
-        # TODO - check
+        # TODO - check correctness
         u_load = np.array([q/(omega**2*rho*A), 0, q/(omega**2*rho*A), 0])
         C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
         return C
 
     def displacement(self, x, omega, C=None, u_node_local=None):
-        '''
-        Gets the transverse displacments of the Rayleigh beam
+        """
+        Get the transverse displacments of the Rayleigh beam.
+
         Input:
             x: array. Points along element
             omega: array. Range of frequencies of analysis
@@ -222,12 +227,11 @@ class RayleighBeam(StructuralElement):
             w: array. Transverse displacements
         Note:
             if C is not given, then calculate it based on u_node_local.
-        '''
-
+        """
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
@@ -239,8 +243,9 @@ class RayleighBeam(StructuralElement):
         return w
 
     def rotation(self, x, omega, C=None, u_node_local=None):
-        '''
-        Gets the rotations of the Rayleigh beam
+        """
+        Get the rotations of the Rayleigh beam.
+
         Input:
             x: array. Points along element
             omega: array. Range of frequencies of analysis
@@ -250,12 +255,11 @@ class RayleighBeam(StructuralElement):
             phi: array. Rotational displacements
         Note:
             if C is not given, then calculate it based on u_node_local.
-        '''
-
+        """
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # check if C is input, otherwise calculate
-        if C == None:
+        if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
@@ -265,5 +269,3 @@ class RayleighBeam(StructuralElement):
                1j*C[3]*alpha_4*np.exp(-1j*alpha_4*x))
 
         return -phi
-
-
