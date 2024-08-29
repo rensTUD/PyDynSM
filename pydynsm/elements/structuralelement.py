@@ -132,21 +132,21 @@ class StructuralElement(ABC):
         
         return u_elem_full
     
-    @abstractmethod
+    # @abstractmethod
     def ElementWaveNumbers(self, omega):
         '''
         Must return the wavenumbers of the element
         '''
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def LocalStiffness(self, omega):
         '''
         Must return the local stiffness matrix for the element.
         '''
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
         '''
         Must return the local element displacements as a function of global displacements, frequency, and number of evaluation points.
@@ -158,14 +158,14 @@ class StructuralElement(ABC):
         '''
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def Coefficients(self, u_node_local, omega):
         '''
         Must return the solution coefficients of the general solution of the element
         '''
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def LocalDistributedLoad(self, q, omega):
         '''
         Must return the local distributed load vector.

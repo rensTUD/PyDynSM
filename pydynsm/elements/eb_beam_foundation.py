@@ -44,7 +44,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
 
-    def local_stiffness(self, omega):
+    def LocalStiffness(self, omega):
         """
         Determine the stiffness of the EB-beam over viscoelastic foundation.
 
@@ -87,7 +87,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
         
         return K_local
 
-    def element_wavenumbers(self, omega):
+    def ElementWaveNumbers(self, omega):
         """
         Determine the wavenumbers of EB beam over viscoelastic foundation.
 
@@ -110,7 +110,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
 
         return alpha_1, alpha_2, alpha_3, alpha_4
 
-    def local_distributed_load(self, q, omega):
+    def LocalDistributedLoad(self, q, omega):
         """
         Add a distributed load to the local element.
 
@@ -147,7 +147,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
 
         return el
 
-    def local_element_displacements(self, u_nodes_global, omega, num_points):
+    def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
         """
         Calculate local displacements w(s) and rotational displacement phi(s).
 
@@ -180,7 +180,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
 
         return [w, phi]
 
-    def coefficients(self, u_node_local, omega):
+    def Coefficients(self, u_node_local, omega):
         """
         Calculate the coefficients of the general solution, in this case 4.
 
