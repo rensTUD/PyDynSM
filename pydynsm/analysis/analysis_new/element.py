@@ -61,7 +61,7 @@ class Element:
         self.dofs = {node.id: node.dofs.copy() for node in nodes}
         
         # set local dofs as empty first
-        self.local_dofs = {node.id: [] for node in nodes}
+        self.local_dofs = {node.id: {} for node in nodes}
         
         # calculate geometrical properties
         self.geometrical_properties()
@@ -249,13 +249,14 @@ class Element:
             element = ElementFactory.CreateElement(element_type, **props)
             
             # add element dofs to local dofs list
-            for node in self.nodes:
-                # if any(dof in dofs for dofs in self.local_dofs.values() for dof in element.dofs)
-                aa = 1    
-                # self.local_dofs[node.id].extend(element.dofs)
+            
+            if not any(dof in dofs for dofs in self.local_dofs.values() for dof in element.dofs):
+                for node in self.nodes:
+                        for local_dof in element.dofs:
+                                self.local_dofs[node.id][local_dof] = None
             
             # check influence of the local dofs of the element on the global dofs of the current node
-            self.check_and_handle_global_dofs(element.dofs)
+            # self.check_and_handle_global_dofs(element.dofs)
             
             # store the element
             self.element_types[element_type] = element    
