@@ -111,29 +111,88 @@ class Element:
         
         self.prescribe_dof(node, **{dof: None for dof in dofs})
                 
+    # def prescribe_dof(self, node, **dofs):
+    #     """
+    #     Prescribes specified DOFs at a given node in the element to given values.
+
+    #     Parameters
+    #     ----------
+    #     node : Node
+    #         The node where DOFs are to be prescribed.
+    #     **dofs : dict
+    #         DOFs and their values to be prescribed at the node.
+
+    #     Raises
+    #     ------
+    #     ValueError
+    #         If any of the specified DOFs are not in the node's current configuration.
+    #     """
+    #     try:
+    #         for dof, value in dofs.items():
+    #             if dof not in node.dofs:
+    #                 raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
+    #             self.dofs[node.id][dof] = value
+    #     except ValueError as e:
+    #         print(e)   
+
     def prescribe_dof(self, node, **dofs):
         """
         Prescribes specified DOFs at a given node in the element to given values.
-
+    
         Parameters
         ----------
         node : Node
             The node where DOFs are to be prescribed.
         **dofs : dict
             DOFs and their values to be prescribed at the node.
-
+    
         Raises
         ------
         ValueError
-            If any of the specified DOFs are not in the node's current configuration.
+            If any of the specified DOFs cannot be added due to lack of influence by local DOFs.
         """
         try:
             for dof, value in dofs.items():
-                if dof not in node.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
-                self.dofs[node.id][dof] = value
+                # if dof not in node.dofs:
+                #     raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_config}")
+                
+                # Check if the dof is in the element's self.dofs
+                if dof not in self.dofs[node.id]:
+                    # Check if this global DOF is affected by any local DOF
+                    local_dof_map = self.map_local_to_global_dofs(self.local_dofs[node.id])
+    
+                    if local_dof_map[dof]:
+                        # If local DOFs affect the global DOF, ask if the user wants to add the global DOF
+                        response = input(f"DOF '{dof}' is not in the element. Would you like to add it? (yes/no): ").strip().lower()
+                        if response == 'yes':
+                            # Add the DOF and prescribe its value
+                            self.dofs[node.id][dof] = value
+                            print(f"DOF '{dof}' added to element and prescribed to {value}.")
+                            
+                            # Also update local DOFs based on this new global DOF
+                            global_dof_map = self.map_global_to_local_dofs([dof])
+                            for local_dof in global_dof_map[dof]:
+                                if local_dof in self.local_dofs[node.id]:
+                                    self.local_dofs[node.id][local_dof] = value  
+                            print(f"Local DOFs updated to reflect new global DOF '{dof}'.")
+                        else:
+                            print(f"DOF '{dof}' not added to the element.")
+                    else:
+                        # If no local DOFs affect the global DOF, print an appropriate message
+                        print(f"DOF '{dof}' is not present and cannot be added based on the chosen sections of the element.")
+                else:
+                    # If the DOF is already in the element's self.dofs, just prescribe its value
+                    self.dofs[node.id][dof] = value
+                    
+                    # Also update local DOFs based on this new global DOF
+                    global_dof_map = self.map_global_to_local_dofs([dof])
+                    for local_dof in global_dof_map[dof]:
+                        if local_dof in self.local_dofs[node.id]:
+                            self.local_dofs[node.id][local_dof] = value  
+    
         except ValueError as e:
-            print(e)              
+            print(e)
+           
 
     def update_node_dofs(self, node, changes):
         """
@@ -161,10 +220,10 @@ class Element:
             
         Parameters
         ----------
-        none
+        alpha : rotation in degrees of the cross-section. I ASSUME A ROTATION OF 0 MEANS ITS PERFECTLY VERTICAL?
         '''
         
-        ## 1 - calculate length of beam (L) and orientation 
+        ## Calculate length of beam (L) and orientation 
         xl, zl, yl = self.nodes[0].get_coords() # x, z and y of left node
 
         xr, zr, yr = self.nodes[1].get_coords() # x, z and y of left node
@@ -257,7 +316,7 @@ class Element:
             
             # check influence of the local dofs of the element on the global dofs of the current node
             # self.check_and_handle_global_dofs(element.dofs)
-            
+            self.apply_global_constraints_to_local_dofs()
             # store the element
             self.element_types[element_type] = element    
         except Exception as e:
@@ -290,10 +349,43 @@ class Element:
         return dof_vector
 
     def local_to_global_dof(self, local_dof_vector):
+        """
+        Transforms a local DOF vector into the global DOF vector using the rotation matrix.
+    
+        Parameters
+        ----------
+        local_dof_vector : numpy.ndarray
+            The local DOF vector.
+    
+        Returns
+        -------
+        global_dof_vector : numpy.ndarray
+            The global DOF vector.            
+        """
+        
         global_dof_vector = self.R[:6,:6].T @ local_dof_vector 
         return global_dof_vector
     
-    def check_global_dof_influence(self,dofs):
+    def global_to_local_dof(self, global_dof_vector):
+        """
+        Transforms a global DOF vector into the local DOF vector using the inverse of the rotation matrix.
+    
+        Parameters
+        ----------
+        global_dof_vector : numpy.ndarray
+            The global DOF vector.
+    
+        Returns
+        -------
+        local_dof_vector : numpy.ndarray
+            The local DOF vector.
+        """
+        
+        # Apply the rotation matrix transpose (which is the inverse for orthogonal matrices)
+        local_dof_vector = self.R[:6, :6] @ global_dof_vector
+        return local_dof_vector
+    
+    def map_local_to_global_dofs(self,local_dofs):
         """
         Checks which global DOFs are affected by each local DOF.
 
@@ -302,15 +394,107 @@ class Element:
         affected_dofs : dict
             Dictionary where keys are local DOFs and values are lists of affected global DOFs.
         """
-        affected_dofs = {dof: [] for dof in dofs}
-        for dof in dofs:
+        affected_global_dofs = {dof: [] for dof in local_dofs}
+        for dof in local_dofs:
             local_dof_vector = np.zeros(len(self.dof_mapping))
             local_dof_vector[self.dof_mapping[dof]] = 1
+            
+            # Transform to global DOF space
             global_dof_vector = self.local_to_global_dof(local_dof_vector)
+            
+            # Identify the affected local DOFs
             affected_global_dofs_indices = np.nonzero(global_dof_vector)[0]
-            affected_global_dofs = [self.reverse_dof_mapping[index] for index in affected_global_dofs_indices]
-            affected_dofs[dof] = affected_global_dofs
-        return affected_dofs
+            affected_global_dofs_list = [self.reverse_dof_mapping[index] for index in affected_global_dofs_indices]
+            affected_global_dofs[dof] = affected_global_dofs_list
+            
+        return affected_global_dofs
+    
+    def map_global_to_local_dofs(self, global_dofs):
+        """
+        Checks which local DOFs are affected by each global DOF.
+    
+        Parameters
+        ----------
+        global_dofs : list
+            List of global DOFs to check.
+    
+        Returns
+        -------
+        affected_local_dofs : dict
+            Dictionary where keys are global DOFs and values are lists of affected local DOFs.
+        """
+        affected_local_dofs = {dof: [] for dof in global_dofs}
+        
+        for dof in global_dofs:
+            global_dof_vector = np.zeros(len(self.dof_mapping))
+            global_dof_vector[self.dof_mapping[dof]] = 1  # Activate the specific global DOF
+            
+            # Transform to local DOF space
+            local_dof_vector = self.global_to_local_dof(global_dof_vector)
+            
+            # Identify the affected local DOFs
+            affected_local_dofs_indices = np.nonzero(local_dof_vector)[0]
+            affected_local_dofs_list = [self.reverse_dof_mapping[index] for index in affected_local_dofs_indices]
+            affected_local_dofs[dof] = affected_local_dofs_list
+    
+        return affected_local_dofs
+    
+    def apply_global_constraints_to_local_dofs(self):
+        """
+        Maps global DOF constraints to local DOFs and applies these constraints to the local DOFs
+        of the element.
+    
+        It updates `self.local_dofs` based on the global DOF constraints stored in `self.dofs`.
+        """
+        # Iterate through each node in the element
+        for node in self.nodes:
+            # Get the global DOFs for the node
+            global_dofs = node.dofs
+            
+            # Use the map_global_to_local_dofs to see how the global DOFs map to local DOFs
+            global_dof_keys = [dof for dof in global_dofs]  # Get the keys (dof names)
+            local_dof_map = self.map_global_to_local_dofs(global_dof_keys)
+            
+            # Apply the constraints from global DOFs to local DOFs
+            for global_dof, local_dofs in local_dof_map.items():
+                # Check if the global DOF is constrained (fixed or prescribed)
+                global_dof_value = global_dofs[global_dof]
+                
+                if global_dof_value is not None:  # Global DOF is either fixed (0) or prescribed (specific value)
+                    for local_dof in local_dofs:
+                        # Only apply the constraint if the local DOF is valid (exists in the element's local DOFs)
+                        if local_dof in self.local_dofs[node.id]:
+                            self.local_dofs[node.id][local_dof] = global_dof_value
+
+        # print(f"Updated local DOFs based on global constraints: {self.local_dofs}")     
+
+    def apply_global_dof_change(self, node, global_dof, global_dof_value):
+            """
+            Applies the change in a specific global DOF to both the global and local DOFs
+            of the element.
+    
+            Parameters
+            ----------
+            node : Node
+                The node whose global DOF is being changed.
+            global_dof : str
+                The name of the global DOF that has changed.
+            global_dof_value : float
+                The new value of the global DOF (fixed, free, or prescribed).
+            """
+            # Update the element's global DOFs for this node
+            if global_dof in self.dofs[node.id]:
+                self.dofs[node.id][global_dof] = global_dof_value
+                print(f"Global DOF '{global_dof}' for node {node.id} updated to {global_dof_value}.")
+            
+            # Map the changed global DOF to the local DOFs
+            local_dof_map = self.map_global_to_local_dofs([global_dof])
+            
+            # Apply the change to the local DOFs
+            for local_dof in local_dof_map[global_dof]:
+                if local_dof in self.local_dofs[node.id]:
+                    self.local_dofs[node.id][local_dof] = global_dof_value
+                    print(f"Local DOF '{local_dof}' for node {node.id} updated to {global_dof_value}.")
     
     def check_and_handle_global_dofs(self,dofs):
         """

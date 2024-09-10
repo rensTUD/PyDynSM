@@ -98,7 +98,30 @@ class Node:
         """
         if changes:
             for element in self.connected_elements:
-                element.update_node_dofs(self,changes)            
+                element.update_node_dofs(self,changes)
+                
+    def apply_dof_change_to_elements(self, changed_dof):
+            """
+            Applies the change in a specific global DOF to the connected elements,
+            mapping the global DOF to the corresponding local and global DOFs in each element.
+    
+            Parameters
+            ----------
+            changed_dof : str
+                The name of the global DOF that has changed (e.g., 'x', 'phi_y').
+            """
+            # Check if the changed_dof is part of the node's current DOFs
+            if changed_dof not in self.dofs:
+                raise ValueError(f"DOF '{changed_dof}' is not part of the node's current configuration.")
+            
+            # Get the changed DOF value
+            changed_value = self.dofs[changed_dof]
+    
+            # Propagate the change to all connected elements
+            for element in self.connected_elements:
+                element.apply_global_dof_change(self, changed_dof, changed_value)
+    
+            print(f"Global DOF '{changed_dof}' change applied to connected elements.")                
 
     def connect_element(self, element):
         """

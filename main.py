@@ -43,7 +43,7 @@ node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
 
 # %%% Now set the constraints directly onto the nodes
 node1.fix_node('x', 'z')
-node2.fix_node('z')
+node2.fix_node('x')
 
 # %%%% test adding a load to the node
 
@@ -71,6 +71,14 @@ elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
 # %%% now set the sections (or element types for that matter)
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+
+# %%% test adding dof to an element that is not supported by the local dofs of that element
+
+elem.fix_dof(node2, 'z')
+
+
+# %%%%
+elem.free_dof(node2, 'z')
 
 # %%%% plot elements too
 

@@ -83,7 +83,7 @@ class Node:
         # Load any default dof_config or apply custom one SHOULD THINK WHETHER THIS IS USEFULL OR JUST LEAVE IT FULLY AUTOMATIC BASED ON APPLIED SECTIONS
         self.dof_config = dof_config if dof_config else self.dof_configurations[config]
         # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
-        self.dofs = {dof: None for dof_list in self.dof_configurations[config] for dof in dof_list}
+        self.dofs = {dof: None for dof_list in self.dof_config for dof in dof_list}
 
         # location in space
         self.x     = x
@@ -169,7 +169,7 @@ class Node:
         try:
             for dof, value in dofs.items():
                 if dof not in self.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_configurations[self.config]}")
+                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_config}")
                 if self.dofs[dof] != value:
                     self.dofs[dof] = value
                     changes[dof] = value
@@ -180,7 +180,20 @@ class Node:
         if changes:
             for element in self.connected_elements:
                 element.update_node_dofs(self,changes)
-    
+
+    def AddLoad(self, p):
+        """
+        Adds the given loads to the node.
+
+        The load is a vector p, which includes the load in the x and y direction and a moment. 
+        These loads are added to the existing loads of the node.
+
+        Parameters:
+            p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
+                             and the moment. 
+        """
+        self.nodal_forces.append(p)
+
     def get_coords(self):
         """
         Returns the coordinates of the node based on its DOF configuration.
