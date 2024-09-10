@@ -190,10 +190,10 @@ class Node:
         tuple
             Coordinates of the node (x, z, y) if applicable.
         """
-        coords = [self.x, self.z]
-        if 'y' in self.dof_configurations[self.config][0]:
-            coords.append(self.y)
+        coords = [self.x, self.z, self.y]
+
         return tuple(coords)
+  
     
 
     
@@ -363,7 +363,7 @@ class Element:
         ## 1 - calculate length of beam (L) and orientation 
         xl, zl, yl = self.nodes[0].get_coords() # x, z and y of left node
 
-        xr, zr, yr = self.nodes[0].get_coords() # x, z and y of left node
+        xr, zr, yr = self.nodes[1].get_coords() # x, z and y of left node
 
         # get the length of the element
         l = np.sqrt((xr-xl)**2 + (zr-zl)**2 + (yr-yl)**2)           
@@ -493,8 +493,13 @@ def find_unique_redundant_dofs(B):
         for neg in negatives:
             redundant_dofs.add(neg)
 
-    # Only columns that are completely zero and not identified in negatives are truly unique
+    # Identify DOFs that are not involved in any constraints (all zeros in their column)
     zero_dofs = {i for i in range(num_dofs) if np.all(B[:, i] == 0)}
+    
+    # Update unique_dofs:
+    # 1. Add zero_dofs to include DOFs not involved in any constraints
+    # 2. Remove any DOFs that were identified as redundant
+    # This ensures that DOFs are correctly classified as unique or redundant
     unique_dofs = (unique_dofs | zero_dofs) - redundant_dofs
 
     return sorted(unique_dofs), sorted(redundant_dofs)

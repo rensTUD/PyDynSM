@@ -250,9 +250,9 @@ class Element:
             
             # add element dofs to local dofs list
             for node in self.nodes:
-                if any(dof in dofs for dofs in self.local_dofs.values() for dof in element.dofs)
-                    
-                self.local_dofs[node.id].extend(element.dofs)
+                # if any(dof in dofs for dofs in self.local_dofs.values() for dof in element.dofs)
+                aa = 1    
+                # self.local_dofs[node.id].extend(element.dofs)
             
             # check influence of the local dofs of the element on the global dofs of the current node
             self.check_and_handle_global_dofs(element.dofs)
