@@ -9,6 +9,7 @@ Created on Wed Jun 12 11:52:01 2024
 import numpy as np
 from scipy.linalg import inv
 from ...elements import ElementFactory
+from collections import defaultdict
 
 # Class definition
 class Analysis:
@@ -278,6 +279,7 @@ class Analysis:
     def assign_dof_indices(self, nodes, elements):
         """
         Assigns global indices to the degrees of freedom (DOFs) of all elements.
+        The element dofs are leading here, nodal dofs will be used to connect element dofs
 
         Parameters
         ----------
@@ -289,24 +291,83 @@ class Analysis:
         dof_indices : dict
             Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
         """
-        dof_indices = {}
+        dof_indices = defaultdict(dict)
         global_index = 0  # Start a global index counter for all DOFs in the system
 
         for node in nodes:
             for element in node.connected_elements:
-                # Initialize an entry for this node within this element
-                dof_indices[(node.id, element.id)] = {}
+                
                 # Use the DOF configuration for this particular node (based on the node's own configuration)
-                for dof in node.dofs.keys():
+                # for dof in node.dofs.keys():
+                #     dof_indices[(node.id, element.id)][dof] = global_index
+                #     global_index += 1  # Increment global index for each DOF
+                    
+                # use the DOF configuration of the element for this specific node
+                for dof in element.dofs[node.id].keys():
                     dof_indices[(node.id, element.id)][dof] = global_index
                     global_index += 1  # Increment global index for each DOF
 
         return dof_indices
 
+    # def build_matrix_B(self, nodes, elements, dof_indices):
+    #     """
+    #     Builds the constraint matrix B for the structural system.
+
+    #     Parameters
+    #     ----------
+    #     nodes : list of Node
+    #         List of nodes in the structural system.
+    #     elements : list of Element
+    #         List of elements in the structural system.
+    #     dof_indices : dict
+    #         Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+
+    #     Returns
+    #     -------
+    #     B : numpy.ndarray
+    #         The constraint matrix B.
+    #     """
+    #     # Calculate the total number of DOFs
+    #     num_dof = sum(len(node.dofs) for element in elements for node in element.nodes )  # Dynamic count of all DOFs
+    #     B = np.zeros((0, num_dof))
+
+    #     # Enforce compatibility conditions at each node
+    #     for node in nodes:
+    #         if len(node.connected_elements) > 1:  # Only consider nodes connected to more than one element
+    #             # We need to handle this correctly using (node.id, element.id)
+    #             connected_indices = []
+    #             for element in node.connected_elements:
+    #                 if (node.id, element.id) in dof_indices:
+    #                     connected_indices.append((element, dof_indices[(node.id, element.id)]))
+
+    #             # Proceed only if there are connected elements with valid DOF indices
+    #             if connected_indices:
+    #                 # TODO - CHANGE SUCH THAT THE ASSUMPTION IS NOT TAKEN AND WE CHECK PER ELEMENT AT THE SPECIFIC NODE
+    #                 # Assuming all elements have the same DOFs for nodes
+    #                 for dof in node.dofs.keys():
+    #                     all_dofs = []
+    #                     for element, indices in connected_indices:
+    #                         if dof in indices:
+    #                             index = indices[dof]
+    #                             dof_value = element.dofs[node.id][dof] # Node's DOF value from the element itself
+    #                             all_dofs.append((index, dof_value))
+                        
+    #                     # Use the first DOF as the reference for compatibility
+    #                     if all_dofs:
+    #                         primary_index, primary_value = all_dofs[0]
+    #                         for index, value in all_dofs[1:]:
+    #                             if value == primary_value:  # Enforce compatibility if values match
+    #                                 row = np.zeros(num_dof)
+    #                                 row[primary_index] = 1  # Positive sign for the primary DOF
+    #                                 row[index] = -1  # Negative sign for the compared DOF
+    #                                 B = np.vstack([B, row])  # Add this new row to the matrix B
+
+    #     return B
+
     def build_matrix_B(self, nodes, elements, dof_indices):
         """
         Builds the constraint matrix B for the structural system.
-
+    
         Parameters
         ----------
         nodes : list of Node
@@ -315,48 +376,46 @@ class Analysis:
             List of elements in the structural system.
         dof_indices : dict
             Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
-
+    
         Returns
         -------
         B : numpy.ndarray
             The constraint matrix B.
         """
-        # Calculate the total number of DOFs
-        num_dof = sum(len(node.dofs) for element in elements for node in element.nodes )  # Dynamic count of all DOFs
-        B = np.zeros((0, num_dof))
-
-        # Enforce compatibility conditions at each node
+        num_dof = sum(len(node.dofs) for element in elements for node in element.nodes)  # Calculate total DOFs
+    
+        # Preallocate a larger matrix to avoid expensive np.vstack() operations
+        B = np.zeros((num_dof, num_dof))
+        constraint_counter = 0  # Keeps track of which row in B we are filling
+    
         for node in nodes:
-            if len(node.connected_elements) > 1:  # Only consider nodes connected to more than one element
-                # We need to handle this correctly using (node.id, element.id)
-                connected_indices = []
-                for element in node.connected_elements:
-                    if (node.id, element.id) in dof_indices:
-                        connected_indices.append((element, dof_indices[(node.id, element.id)]))
-
-                # Proceed only if there are connected elements with valid DOF indices
+            if len(node.connected_elements) > 1:  # Only consider nodes connected to multiple elements
+                # find the element classes and the indices of its dofs that are connected to the current node
+                connected_indices = [(element, dof_indices[(node.id, element.id)])  
+                                     for element in node.connected_elements
+                                     if (node.id, element.id) in dof_indices]
+                
+                # only continue if connected indices are actually found
                 if connected_indices:
-                    # TODO - CHANGE SUCH THAT THE ASSUMPTION IS NOT TAKEN AND WE CHECK PER ELEMENT AT THE SPECIFIC NODE
-                    # Assuming all elements have the same DOFs for nodes
+                    # 
                     for dof in node.dofs.keys():
-                        all_dofs = []
-                        for element, indices in connected_indices:
-                            if dof in indices:
-                                index = indices[dof]
-                                dof_value = element.dofs[node.id][dof] # Node's DOF value from the element itself
-                                all_dofs.append((index, dof_value))
-                        
+                        all_dofs = [(indices[dof], element.dofs[node.id][dof]) 
+                                    for element, indices in connected_indices 
+                                    if dof in indices]
+    
                         # Use the first DOF as the reference for compatibility
                         if all_dofs:
-                            primary_index, primary_value = all_dofs[0]
-                            for index, value in all_dofs[1:]:
-                                if value == primary_value:  # Enforce compatibility if values match
-                                    row = np.zeros(num_dof)
-                                    row[primary_index] = 1  # Positive sign for the primary DOF
-                                    row[index] = -1  # Negative sign for the compared DOF
-                                    B = np.vstack([B, row])  # Add this new row to the matrix B
+                            primary_index = all_dofs[0][0]
+                            for index, _ in all_dofs[1:]:
+                                row = np.zeros(num_dof)
+                                row[primary_index] = 1  # Primary DOF
+                                row[index] = -1  # Enforce compatibility with other DOFs
+                                B[constraint_counter, :] = row  # Fill row directly instead of stacking
+                                constraint_counter += 1
+    
+        # Return the trimmed matrix if we overestimated the number of constraints
+        return B[:constraint_counter, :]
 
-        return B
 
     def connectivity(self, nodes, elements):
         """

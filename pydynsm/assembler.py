@@ -207,7 +207,14 @@ class Assembler:
         """
         return self.Analysis.FullDisplacement(u_free)
 
+# %% Testing area
+    def get_dofs_elements(self):
+        return self.Analysis.assign_dof_indices(self.nodes, self.elements)
 
+    def get_B_matrix(self):
+        dof_indices = self.get_dofs_elements()
+        
+        return self.Analysis.build_matrix_B(self.nodes, self.elements, dof_indices)
 # %% TODO's        
     # TODO
     def SaveAssembler(self):

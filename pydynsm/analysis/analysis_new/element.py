@@ -111,41 +111,18 @@ class Element:
         
         self.prescribe_dof(node, **{dof: None for dof in dofs})
                 
-    # def prescribe_dof(self, node, **dofs):
-    #     """
-    #     Prescribes specified DOFs at a given node in the element to given values.
-
-    #     Parameters
-    #     ----------
-    #     node : Node
-    #         The node where DOFs are to be prescribed.
-    #     **dofs : dict
-    #         DOFs and their values to be prescribed at the node.
-
-    #     Raises
-    #     ------
-    #     ValueError
-    #         If any of the specified DOFs are not in the node's current configuration.
-    #     """
-    #     try:
-    #         for dof, value in dofs.items():
-    #             if dof not in node.dofs:
-    #                 raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_configurations[node.config]}")
-    #             self.dofs[node.id][dof] = value
-    #     except ValueError as e:
-    #         print(e)   
-
+        
     def prescribe_dof(self, node, **dofs):
         """
         Prescribes specified DOFs at a given node in the element to given values.
-    
+        
         Parameters
         ----------
         node : Node
             The node where DOFs are to be prescribed.
         **dofs : dict
             DOFs and their values to be prescribed at the node.
-    
+        
         Raises
         ------
         ValueError
@@ -153,46 +130,75 @@ class Element:
         """
         try:
             for dof, value in dofs.items():
-                # if dof not in node.dofs:
-                #     raise ValueError(f"DOF '{dof}' is not available in the node's current configuration. Available DOFs: {node.dof_config}")
-                
-                # Check if the dof is in the element's self.dofs
-                if dof not in self.dofs[node.id]:
-                    # Check if this global DOF is affected by any local DOF
-                    local_dof_map = self.map_local_to_global_dofs(self.local_dofs[node.id])
-    
-                    if local_dof_map[dof]:
-                        # If local DOFs affect the global DOF, ask if the user wants to add the global DOF
-                        response = input(f"DOF '{dof}' is not in the element. Would you like to add it? (yes/no): ").strip().lower()
-                        if response == 'yes':
-                            # Add the DOF and prescribe its value
-                            self.dofs[node.id][dof] = value
-                            print(f"DOF '{dof}' added to element and prescribed to {value}.")
-                            
-                            # Also update local DOFs based on this new global DOF
-                            global_dof_map = self.map_global_to_local_dofs([dof])
-                            for local_dof in global_dof_map[dof]:
-                                if local_dof in self.local_dofs[node.id]:
-                                    self.local_dofs[node.id][local_dof] = value  
-                            print(f"Local DOFs updated to reflect new global DOF '{dof}'.")
-                        else:
-                            print(f"DOF '{dof}' not added to the element.")
-                    else:
-                        # If no local DOFs affect the global DOF, print an appropriate message
-                        print(f"DOF '{dof}' is not present and cannot be added based on the chosen sections of the element.")
+                # Check if the DOF is already in the element's self.dofs
+                if dof in self.dofs[node.id]:
+                    # update the dof with the new value
+                    self._update_dof(node, dof, value)
                 else:
-                    # If the DOF is already in the element's self.dofs, just prescribe its value
-                    self.dofs[node.id][dof] = value
+                    # Check if the global DOF is influenced by local DOFs
+                    local_dof_map = self.map_local_to_global_dofs(self.local_dofs[node.id])
                     
-                    # Also update local DOFs based on this new global DOF
-                    global_dof_map = self.map_global_to_local_dofs([dof])
-                    for local_dof in global_dof_map[dof]:
-                        if local_dof in self.local_dofs[node.id]:
-                            self.local_dofs[node.id][local_dof] = value  
+                    if local_dof_map.get(dof):
+                        self._handle_missing_dof(node, dof, value)
+                    else:
+                        print(f"DOF '{dof}' cannot be added, as it is not affected by local DOFs in the current element configuration.")
     
         except ValueError as e:
             print(e)
-           
+    
+    
+    def _update_dof(self, node, dof, value):
+        """
+        Updates the DOF for a given node, also updating local DOFs if necessary.
+    
+        Parameters
+        ----------
+        node : Node
+            The node to update.
+        dof : str
+            The DOF to be updated.
+        value : Any
+            The value to prescribe to the DOF.
+        """
+        
+        self.dofs[node.id][dof] = value
+        global_dof_map = self.map_global_to_local_dofs([dof])
+        
+        # Update the local DOFs based on the new global DOF
+        for local_dof in global_dof_map[dof]:
+            if local_dof in self.local_dofs[node.id]:
+                self.local_dofs[node.id][local_dof] = value
+    
+    
+    def _handle_missing_dof(self, node, dof, value):
+        """
+        Handles the case where a global DOF is not present in the element but can be influenced by local DOFs.
+    
+        Parameters
+        ----------
+        node : Node
+            The node to update.
+        dof : str
+            The missing DOF.
+        value : Any
+            The value to prescribe to the DOF.
+        """
+        # check for user input
+        response = input(f"DOF '{dof}' is not in the element. Would you like to add it? (yes/no): ").strip().lower()
+        if response == 'no':
+            return
+        
+        # if answer is yes add missing DOF if influenced by local DOFs
+        self.dofs[node.id][dof] = value
+        print(f"DOF '{dof}' added to the element and prescribed to {value}.")
+        
+        # Update local DOFs based on the new global DOF
+        global_dof_map = self.map_global_to_local_dofs([dof])
+        for local_dof in global_dof_map[dof]:
+            if local_dof in self.local_dofs[node.id]:
+                self.local_dofs[node.id][local_dof] = value
+        print(f"Local DOFs updated to reflect new global DOF '{dof}'.")
+          
 
     def update_node_dofs(self, node, changes):
         """
@@ -322,11 +328,15 @@ class Element:
         except Exception as e:
             print(f'Exception occurred - {e}')
         else:
-            print(f'Successfully added element of type: {element_type}')
+            print(f'Successfully added element of type: {element_type} to Element {self.id}')
     
     def RemoveSection(self,element_type):
         '''
-        does what it says
+        Does what it says it does..
+        
+        Returns
+        -------
+        
         '''        
         try:
             del self.element_types[element_type]
