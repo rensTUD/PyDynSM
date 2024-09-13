@@ -41,12 +41,13 @@ ksi = 0.01
 node1 = s1.CreateNode(0,0)
 node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
 node3 = s1.CreateNode(2*L,L)
+node4 = s1.CreateNode(L,2*L)
 
 # %%% Now set the constraints directly onto the nodes
 node1.fix_node('x', 'z')
 node2.fix_node('x')
 node3.fix_node('x','z', 'phi_y')
-
+node4.fix_node('x','z')
 # %%%% test adding a load to the node
 
 # define a lambda function running over omega for p_x
@@ -67,6 +68,7 @@ node1.AddLoad([p_x, 0, 0])
 # initialise element by setting its nodes and calling it from the assembler
 elem = s1.CreateElement([node1, node2])
 elem2 = s1.CreateElement([node2, node3])
+elem3 = s1.CreateElement([node2, node4])
 # %%% try to set a section that is not implemented yet
 elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
  
@@ -76,6 +78,9 @@ elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 elem2.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem2.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+
+elem3.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
+elem3.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 # %%% test adding dof to an element that is not supported by the local dofs of that element
 
 elem.fix_dof(node2, 'z')
@@ -84,13 +89,22 @@ elem.fix_dof(node2, 'z')
 # %%%%
 elem.free_dof(node2, 'z')
 
+# %%%% 
+
+elem3.free_dof(node2,'x')
+elem3.fix_dof(node2,'z')
+
 # %% Testing for connectivity, B, and L matrices
 
 # %%% get global dofs of the elements
-s1.get_dofs_elements()
+dofs_indices = s1.get_dofs_elements()
 
 # %%% run the connectivity
-s1.get_B_matrix()
+B = s1.get_B_matrix()
+
+# %%%%
+
+s1.run_connectivity()
 
 # %%%% plot elements too
 

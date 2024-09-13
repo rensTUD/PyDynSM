@@ -215,6 +215,10 @@ class Assembler:
         dof_indices = self.get_dofs_elements()
         
         return self.Analysis.build_matrix_B(self.nodes, self.elements, dof_indices)
+    
+    def run_connectivity(self):
+        self.Analysis.connectivity(self.nodes, self.elements)
+        
 # %% TODO's        
     # TODO
     def SaveAssembler(self):
