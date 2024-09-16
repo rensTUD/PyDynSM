@@ -25,7 +25,7 @@ Assembler = PDM.Assembler
 s1 = Assembler('beam')
 
 # %%% Parameters
-EA = 7e6
+EA = 7e10
 EI = 1.5 * 7e06 
 rhoA = 1e03 
 q_r = 0*1e02 + 0j 
