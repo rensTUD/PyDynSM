@@ -35,13 +35,13 @@ class Analysis:
         k_global : numpy.ndarray
             Global stiffness matrix.
         """
-        Ndofs = 3  # Assuming 2D with [x, z, phi] = 3 DOFs per node
-        k_global = np.zeros((Ndofs * len(nodes), Ndofs * len(nodes)), complex)
+        # load k_global
+        k_global = np.zeros((self.num_dofs, self.num_dofs), complex)
         
         for e in elements:
             elmat = e.Stiffness(omega)
             idofs = e.GlobalDofs()
-            k_global[np.ix_(idofs, idofs)] += elmat
+            k_global[np.ix_(idofs, idofs)] = elmat
     
         return k_global
 
@@ -223,7 +223,7 @@ class Analysis:
         redundant_dofs : list of int
             Sorted list of redundant DOFs.
         """
-        num_dofs = B.shape[1]
+        self.num_dofs = B.shape[1]
         redundant_dofs = set()
         unique_dofs = set()
 
@@ -237,7 +237,7 @@ class Analysis:
                 redundant_dofs.add(neg)
 
         # Only columns that are completely zero and not identified in negatives are truly unique
-        zero_dofs = {i for i in range(num_dofs) if np.all(B[:, i] == 0)}
+        zero_dofs = {i for i in range(self.num_dofs ) if np.all(B[:, i] == 0)}
         unique_dofs = (unique_dofs | zero_dofs) - redundant_dofs
 
         return sorted(unique_dofs), sorted(redundant_dofs)
@@ -393,19 +393,18 @@ class Analysis:
             List of lists where each sublist contains a DOF index and its value.
         """
         
-        dof_indices = self.assign_dof_indices(nodes, elements)
+        self.dof_indices = self.assign_dof_indices(nodes, elements)
         
-        self.B = self.build_matrix_B(nodes, elements, dof_indices)
+        self.B = self.build_matrix_B(nodes, elements, self.dof_indices)
         
-        unique_dofs, redundant_dofs = self.find_unique_redundant_dofs(self.B)
+        self.unique_dofs, self.redundant_dofs = self.find_unique_redundant_dofs(self.B)
         
-        self.L = self.calculate_L(self.B, unique_dofs, redundant_dofs)
+        self.L = self.calculate_L(self.B, self.unique_dofs, self.redundant_dofs)
         
-        self.free_dofs, self.constrained_dofs = self.classify_free_constrained_dofs(nodes, unique_dofs, dof_indices)
-        
-        
+        self.free_dofs, self.constrained_dofs = self.classify_free_constrained_dofs(nodes, elements, np.array(self.unique_dofs), self.dof_indices)
 
-    def classify_free_constrained_dofs(self, nodes, unique_dofs, dof_indices):
+    
+    def classify_free_constrained_dofs(self, nodes, elements, unique_dofs, dof_indices):
         """
         Classifies unique DOFs as free or constrained (fixed or prescribed) and extracts their indices.
         
@@ -413,6 +412,8 @@ class Analysis:
         --------
         nodes: list of Node
             List of all nodes.
+        elements: list of Element
+            List of elements in the structural system.
         unique_dofs: list
             List of indices considered unique.
         dof_indices: dict
@@ -425,24 +426,42 @@ class Analysis:
         constrained_dofs: list
             List of lists where each sublist contains a DOF index and its value.
         """
-        reverse_dof_lookup = {index: (node_id, dof_name) for (node_id, element_id), dofs in dof_indices.items() for dof_name, index in dofs.items()}
         
+        # create dict to look up via O(1) instead of O(n) for larger system        
+        unique_dof_dict = {old_index: idx for idx, old_index in enumerate(unique_dofs)}
+
+        # introduce empty lists
         free_dofs = []
-        constrained_dofs = []
-
-        for index, dof_index in enumerate(unique_dofs):
-            if dof_index not in reverse_dof_lookup:
-                continue  # Skip if no matching node-dof pair is found
-            node_id, dof_name = reverse_dof_lookup[dof_index]
-            node = next((n for n in nodes if n.id == node_id), None)
+        constrained_dofs = {}
+        
+        # Iterate over all nodes and their connected elements to classify DOFs
+        for node in nodes:
             
-            if not node:
-                continue  # Skip if no node is found
-            
-            dof_value = node.dofs[dof_name]
-            if dof_value is None:
-                free_dofs.append(index)
-            else:
-                constrained_dofs.append([index, dof_value])
-
-        return free_dofs, constrained_dofs
+            # loop over all connected elements
+            for element in node.connected_elements:
+                # get element dofs
+                element_dofs = element.dofs[node.id]
+                # get dofs from dof_indices dictionary
+                for dof, old_index in dof_indices[(node.id,element.id)].items():
+                    
+                    # check whether the current dof is in the unique dofs
+                    new_index = unique_dof_dict.get(old_index)
+                    
+                    # only continue if only 1 location is found
+                    if new_index is not None:
+                        
+                        # get value from element
+                        dof_value = element_dofs[dof]
+                        
+                        # set accordingly, i.e. if None its a free node otherwise its prescribed
+                        if dof_value is None:
+                            free_dofs.append(new_index)
+                        else:
+                            constrained_dofs[new_index] = dof_value
+        
+         # TODO - return sorted list, not per se needed I guess. Furthermore I could change the constrained dofs list to a dictionary
+        # return sorted(free_dofs), sorted(constrained_dofs, key=lambda x: x[0])
+        return np.array(free_dofs), constrained_dofs
+                    
+                    
+                    

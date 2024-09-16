@@ -110,6 +110,9 @@ s1.run_connectivity()
 
 # s1.PlotStructure(plot_elements=True)
 
+# %% get global stiffness matrix
+
+s1.GlobalStiffness(omega)
 
 # %%% Add distributed load
 # TODO - should check whether this is correct, for now it just adds the load as a function

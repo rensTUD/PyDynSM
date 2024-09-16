@@ -72,7 +72,98 @@ class Element:
         # initialise empty list with nodal forces due to element loads
         self.element_nodal_loads = []
         
+    # def GlobalDofs(self):
+    #     return np.hstack ((self., self.nodes[1].dofs))        
+
+# %% stiffness part
+    def check_dofs(self, dofs):
+        """
+        Checks which DOFs are present and returns their numerical values.
+
+        Parameters
+        ----------
+        dofs : list of str
+            List of DOFs to check (e.g., ['x', 'z']).
+
+        Returns
+        -------
+        numerical_dofs : list of int
+            List of numerical values corresponding to the DOFs.
+        """
+        numerical_dofs = []
+        for dof in dofs:
+            if dof in self.dof_mapping:
+                numerical_dofs.append(self.dof_mapping[dof])
+            else:
+                raise ValueError(f"DOF '{dof}' is not recognized.")
+        return numerical_dofs
+
+    def GetNodalDofs(self, element):
+        '''
+        Translates the dofs of an element to the nodal dofs;
         
+        Example:
+            Rod element has dof = 0 (axial only)
+            This will give: nodal_dofs = [0,3]
+        '''
+        
+        dofs = self.check_dofs(element.dofs)
+        
+        nodal_dofs = []
+        # Process each DOF to map it to the current and next node's corresponding DOFs
+        for dof in dofs:
+            # Add the DOF for the current node
+            nodal_dofs.append(dof)
+        # After processing each DOF for the current node, add their counterparts in the next node
+        for dof in dofs:
+            nodal_dofs.append(dof + Element.Ndof)
+                
+        return nodal_dofs
+
+    def Stiffness(self, omega):
+        '''
+        function to determine the global stiffness matrix of the element, as created from its local elements
+        '''
+        
+        Ndof = sum([len(dofs) for dofs in self.dofs.values()])
+        # intialise empty stiffness matrix
+        k_local = np.zeros( (Ndof, Ndof), dtype=complex) 
+        
+        # loop over all present elements and add their contribution to the full matrix
+        for element_type, element in self.element_types.items():
+            # k_loc += element.FullStiffness(omega)
+            k_local += self.FullStiffness(element,omega)
+        
+        # return the full global stiffness matrix
+        k_glob = ( self.Rt @ k_local ) @ self.R 
+                
+        return k_glob
+
+    def FullStiffness(self, element, omega):
+        '''
+        Function that assembles the full stiffness matrix based on the local stiffness matrix. 
+        
+        For example, it will translate the 2x2 K_local of the rod to the full 6x6 matrix which it is in 2D
+        
+        '''
+        
+        # get nodal dofs
+        nodal_dofs = self.GetNodalDofs(element)
+        
+        # initialise 6x6 empty complex matrix
+        K_full = np.zeros( (Ndof, Ndof), dtype=complex) 
+        
+        # calculate local stiffness matrix of the element
+        K_local = element.LocalStiffness(omega)
+        
+        # assign to correct locations in full matrix
+        for i, row in enumerate(nodal_dofs):
+            for j, col in enumerate(nodal_dofs):
+                K_full[row, col] = K_local[i, j]
+                
+        return K_full 
+
+# %% prescribing dof things    
     def fix_dof(self, node, *dofs):
         """
         Fixes specified DOFs at a given node in the element.
