@@ -55,7 +55,7 @@ p_x = lambda omega: 1 if omega == omega_f else 0
 
 # add a load directly to node2
 
-node1.AddLoad([p_x, 0, 0])
+node1.AddLoad([0, 0, 0])
 
 # %%%% Plot nodes
 
@@ -80,14 +80,14 @@ s1.PlotStructure(plot_elements=True)
 
 # %%% Add distributed load
 # TODO - should check whether this is correct, for now it just adds the load as a function
-q_r = lambda omega: 1 if omega == omega_f else 0
-q_b = lambda omega: 1 if omega == omega_f else 0
+q_r = lambda omega: 0 if omega == omega_f else 0
+q_b = lambda omega: 1e06 if omega == omega_f else 0
 elem.AddDistributedLoad([q_r,q_b,0])
 
 # %%% Get the global stiffness and force matrices
 
-global_K = s1.GlobalStiffness(omega)
-global_F = s1.GlobalForce(omega)
+# global_K = s1.GlobalStiffness(omega)
+# global_F = s1.GlobalForce(omega)
 
 # %%% get the global constrained stiffness and force
 
