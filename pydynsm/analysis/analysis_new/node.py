@@ -7,6 +7,7 @@ Created on Thu Feb 29 13:34:56 2024
 
 # %% Import dependencies
 import numpy as np
+from collections import defaultdict
 
 # %% class definition
 class Node:
@@ -69,14 +70,16 @@ class Node:
         self.dof_config = dof_config if dof_config else self.dof_configurations[config]
         # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
         self.dofs = {dof: None for dof_list in self.dof_config for dof in dof_list}
-
+        
+        self.dof_indices = {}
+        
         # location in space
         self.x     = x
         self.z     = z
         self.y     = y
         
-        # initialise empty forces lists
-        self.nodal_forces = []
+        # initialise empty forces dictionary
+        self.element_loads = defaultdict(dict)
         
         # node name
         self.id = Node.nn
@@ -189,18 +192,35 @@ class Node:
             for element in self.connected_elements:
                 element.update_node_dofs(self,changes)
 
-    def AddLoad(self, p):
-        """
-        Adds the given loads to the node.
+    # def AddLoad(self, p):
+    #     """
+    #     Adds the given loads to the node.
 
-        The load is a vector p, which includes the load in the x and y direction and a moment. 
-        These loads are added to the existing loads of the node.
+    #     The load is a vector p, which includes the load in the x and y direction and a moment. 
+    #     These loads are added to the existing loads of the node.
 
-        Parameters:
-            p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
-                             and the moment. 
-        """
-        self.nodal_forces.append(p)
+    #     Parameters:
+    #         p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
+    #                          and the moment. 
+    #     """
+    #     self.nodal_forces.append(p)
+        
+    def AddLoad(self,**loads):
+        '''
+        Adds distributed loads to the element.
+    
+        Parameters
+        ----------
+        **loads : dict
+            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude.
+        '''
+        
+        # Assign unpacked loads to the element's list of loads
+        for dof, load in loads.items():
+            if dof not in self.element_loads.keys():
+                self.nodal_loads[dof] = load
+            else:
+                print(f'Load already added for DOF {dof}')        
 
     def get_coords(self):
         """

@@ -118,7 +118,12 @@ K_gobal = s1.GlobalStiffness(omega)
 # TODO - should check whether this is correct, for now it just adds the load as a function
 q_r = lambda omega: 1 if omega == omega_f else 0
 q_b = lambda omega: 1 if omega == omega_f else 0
-elem.AddDistributedLoad([q_r,q_b,0])
+elem.AddDistributedLoad(x=q_r, z=q_b)
+
+# %% get global force vector
+
+F_global = s1.GlobalForce(omega)
+
 
 # %%% Get the global stiffness and force matrices
 

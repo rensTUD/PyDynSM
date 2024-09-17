@@ -193,17 +193,69 @@ class Element:
 
 # %% loads
 
-    def AddDistributedLoad(self,**q):
+    def AddDistributedLoad(self,**loads):
         '''
-        docstring
+        Adds distributed loads to the element.
+    
+        Parameters
+        ----------
+        **loads : dict
+            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude.
         '''
         
-        # assign unpacked load to element list of loads
-        for dof, load in q.items():
+        # Assign unpacked loads to the element's list of loads
+        for dof, load in loads.items():
             if dof not in self.element_loads.keys():
                 self.element_loads[dof] = load
             else:
-                print(f'Load already added')                
+                print(f'Load already added for DOF {dof}')
+
+    def EvaluateDistributedLoad(self, element_loads, omega):
+        '''
+        Evaluates the distributed load
+        '''
+        # get the local dof indices 
+        local_dof_indices = self.get_local_element_dof_indices()
+        
+        # number of dofs in the current Element
+        Ndof = len(local_dof_indices)
+        
+        # initialise local nodal load vector
+        q_loc = np.zeros(Ndof, complex)
+        
+        
+        for element_type_name, element_type in self.element_types.items():
+            # get dofs of specific element type
+            dofs = element_type.dofs
+            
+            # get the load into a vector belonging to only the dofs of the current element_type. Evaluate with omega if load is a lambda function
+            q_evaluated = [
+                element_loads.get(dof,0)(omega) if callable(element_loads.get(dof,0)) else element_loads.get(dof,0)
+                for dof in dofs
+                ]
+            
+            # pass through the loads that are specific for that element
+            q_loc += self.FullDistributedLoad(element_type, q_evaluated, omega)[np.ix_(local_dof_indices)]
+        
+        q_glob = self.R[np.ix_(local_dof_indices,local_dof_indices)].T @ q_loc
+        
+        return q_glob   
+
+    def FullDistributedLoad(self, element_type, q, omega):
+        '''
+        Get the nodal loads from the distributed load per element type and put in the full load vector
+        '''
+        # get the element_type dofs
+        element_type_dofs = self.get_element_type_dofs(element_type)
+        
+        # initialise maxNdof empty complex vector 
+        q_full = np.zeros(2*Element.maxNdof,complex)
+        
+        # set directly
+        q_full[np.ix_(element_type_dofs)] = element_type.LocalDistributedLoad(q, omega)
+
+        
+        return q_full             
                 
 # %% prescribing dof things    
     def fix_dof(self, node, *dofs):

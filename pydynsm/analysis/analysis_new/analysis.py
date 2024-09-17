@@ -76,20 +76,23 @@ class Analysis:
         f_global : numpy.ndarray
             Global force vector.
         """
-        Ndofs = 3  # Assuming 2D with [x, z, phi] = 3 DOFs per node
-        f_global = np.zeros(Ndofs * len(nodes), complex)
         
+        # set the global force vector
+        f_global = np.zeros(self.num_dofs, complex)
+        
+        # get all element loads
         for element in elements:
-            if not element.element_nodal_loads:
+            # if no loads present continue loop
+            if not element.element_loads:
                 continue
             
-            left_dofs = element.nodes[0].dofs
-            right_dofs = element.nodes[1].dofs
-            dofs = np.hstack([left_dofs, right_dofs])
+            # get dofs of the element
+            dofs = element.GlobalDofs()
             
-            for element_nodal_load in element.element_nodal_loads:
-                f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element_nodal_load, omega)
+            # for element_load in element.element_loads:
+            f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element.element_loads, omega)
         
+        # get all nodal loads
         for n in nodes:
             if not n.nodal_forces:
                 continue
@@ -339,17 +342,23 @@ class Analysis:
         """
         dof_indices = defaultdict(dict)
         global_index = 0  # Start a global index counter for all DOFs in the system
-    
+        
         for element in elements:
     
             for node in element.nodes:
                 node_id = node.id
-    
+                
                 # Use the DOF configuration of the element for this specific node
                 for dof in element.dofs[node_id].keys():
                     dof_indices[(node_id, element.id)][dof] = global_index
+                    
                     # Also assign to the element itself as this can be useful
                     element.dof_indices[node_id][dof] = global_index
+                    # TODO - SEE HOW TO HANDLE DOF INDICES FOR ELEMENT DOFS AND NODE DOFS IN A NEAT WAY. NOW WE HAVE THREE DIFFERENT DICTIONARIES STORING THEM. NOT THAT EFFICIENT ATM
+                    # same for the node, but only if present in node
+                    if dof in node.dofs:
+                        node.dof_indices[dof] = global_index
+                        
                     global_index += 1  # Increment global index for each DOF
     
         return dof_indices    

@@ -69,12 +69,14 @@ class Rod_1D(StructuralElement):
         # assign local variables for ease of coding
         L = self.L
         
+        # unpack the load which is only one load in this case
+        q = q[0]
 
         # determine wavenumber
         beta_r = self.ElementWaveNumbers(omega)
         
         
-        el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
+        el = np.array([(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)])
         
         return el
 
