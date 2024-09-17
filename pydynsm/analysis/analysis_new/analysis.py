@@ -38,12 +38,25 @@ class Analysis:
         # load k_global
         k_global = np.zeros((self.num_dofs, self.num_dofs), complex)
         
+        # set up block matrix
         for e in elements:
             elmat = e.Stiffness(omega)
             idofs = e.GlobalDofs()
             k_global[np.ix_(idofs, idofs)] = elmat
+            
+        # sort by unique / redundant dofs
+        k_uu = k_global[np.ix_(self.unique_dofs,self.unique_dofs)]
+        k_ur = k_global[np.ix_(self.unique_dofs,self.redundant_dofs)]
+        k_ru = k_global[np.ix_(self.redundant_dofs,self.unique_dofs)]
+        k_rr = k_global[np.ix_(self.redundant_dofs,self.redundant_dofs)]
+        
+        K_global = np.block([[k_uu, k_ur],
+                                    [k_ru, k_rr]])
+        
+        # constrain by using L
+        K_global_unique = self.L.T @ K_global @ self.L
     
-        return k_global
+        return K_global_unique
 
     def GlobalForce(self, nodes, elements, omega):
         """
@@ -276,7 +289,7 @@ class Analysis:
         except np.linalg.LinAlgError:
             raise ValueError("Matrix B_r is singular and cannot be inverted.")
 
-    def assign_dof_indices(self, nodes, elements):
+    def assign_dof_indices_old(self, nodes, elements):
         """
         Assigns global indices to the degrees of freedom (DOFs) of all elements.
         The element dofs are leading here, nodal dofs will be used to connect element dofs
@@ -291,23 +304,55 @@ class Analysis:
         dof_indices : dict
             Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
         """
+        # TODO - currently we loop first over nodes which felt that it makes sense. However the global matrix before constraining by L is broken up. There are no block matrices per element in that case
         dof_indices = defaultdict(dict)
         global_index = 0  # Start a global index counter for all DOFs in the system
 
         for node in nodes:
             for element in node.connected_elements:
                 
-                # Use the DOF configuration for this particular node (based on the node's own configuration)
-                # for dof in node.dofs.keys():
-                #     dof_indices[(node.id, element.id)][dof] = global_index
-                #     global_index += 1  # Increment global index for each DOF
-                    
                 # use the DOF configuration of the element for this specific node
                 for dof in element.dofs[node.id].keys():
                     dof_indices[(node.id, element.id)][dof] = global_index
+                    # also assign to the element itself as this can be useful
+                    element.dof_indices[node.id][dof] = global_index
                     global_index += 1  # Increment global index for each DOF
 
         return dof_indices
+    
+    def assign_dof_indices(self, nodes, elements):
+        """
+        Assigns global indices to the degrees of freedom (DOFs) of all elements.
+        The element DOFs are leading here; nodal DOFs will be used to connect element DOFs.
+    
+        Parameters
+        ----------
+        nodes : list of Node
+            List of nodes in the structural system.
+        elements : list of Element
+            List of elements in the structural system.
+    
+        Returns
+        -------
+        dof_indices : defaultdict
+            Dictionary mapping (node_id, element_id) to a dict of DOFs and their global indices.
+        """
+        dof_indices = defaultdict(dict)
+        global_index = 0  # Start a global index counter for all DOFs in the system
+    
+        for element in elements:
+    
+            for node in element.nodes:
+                node_id = node.id
+    
+                # Use the DOF configuration of the element for this specific node
+                for dof in element.dofs[node_id].keys():
+                    dof_indices[(node_id, element.id)][dof] = global_index
+                    # Also assign to the element itself as this can be useful
+                    element.dof_indices[node_id][dof] = global_index
+                    global_index += 1  # Increment global index for each DOF
+    
+        return dof_indices    
 
 
     def build_matrix_B(self, nodes, elements, dof_indices):

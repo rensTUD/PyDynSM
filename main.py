@@ -112,7 +112,7 @@ s1.run_connectivity()
 
 # %% get global stiffness matrix
 
-s1.GlobalStiffness(omega)
+K_gobal = s1.GlobalStiffness(omega)
 
 # %%% Add distributed load
 # TODO - should check whether this is correct, for now it just adds the load as a function

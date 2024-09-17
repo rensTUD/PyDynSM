@@ -1,7 +1,7 @@
 # %% import dependencies
 
 import numpy as np
-
+from collections import defaultdict
 from ...elements import ElementFactory
 
 # %% class definition
@@ -34,6 +34,9 @@ class Element:
         'phi_y': 5
     }
     
+    # Ndof is essentially the length of dof_mapping, which is 6
+    maxNdof = len(dof_mapping)
+    
     reverse_dof_mapping = {v: k for k, v in dof_mapping.items()}
     
     def __init__(self, nodes):
@@ -63,6 +66,8 @@ class Element:
         # set local dofs as empty first
         self.local_dofs = {node.id: {} for node in nodes}
         
+        self.dof_indices = {node.id: {} for node in nodes}
+        
         # calculate geometrical properties
         self.geometrical_properties()
         
@@ -70,10 +75,10 @@ class Element:
         self.element_types = {}
         
         # initialise empty list with nodal forces due to element loads
-        self.element_nodal_loads = []
+        self.element_loads = defaultdict(dict)
         
-    # def GlobalDofs(self):
-    #     return np.hstack ((self., self.nodes[1].dofs))        
+    def GlobalDofs(self):
+        return [dof_indice for node in self.nodes for dof_indice in self.dof_indices[node.id].values()]        
 
 # %% stiffness part
     def check_dofs(self, dofs):
@@ -98,7 +103,7 @@ class Element:
                 raise ValueError(f"DOF '{dof}' is not recognized.")
         return numerical_dofs
 
-    def GetNodalDofs(self, element):
+    def get_element_type_dofs(self, element_type):
         '''
         Translates the dofs of an element to the nodal dofs;
         
@@ -107,62 +112,99 @@ class Element:
             This will give: nodal_dofs = [0,3]
         '''
         
-        dofs = self.check_dofs(element.dofs)
+        element_dofs = self.check_dofs(element_type.dofs)
         
-        nodal_dofs = []
+        element_type_dofs = []
         # Process each DOF to map it to the current and next node's corresponding DOFs
-        for dof in dofs:
+        for dof in element_dofs:
             # Add the DOF for the current node
-            nodal_dofs.append(dof)
+            element_type_dofs.append(dof)
         # After processing each DOF for the current node, add their counterparts in the next node
-        for dof in dofs:
-            nodal_dofs.append(dof + Element.Ndof)
+        for dof in element_dofs:
+            element_type_dofs.append(dof + Element.maxNdof)
                 
-        return nodal_dofs
+        return element_type_dofs
+    
+    
+    def get_local_element_dof_indices(self):
+        """
+        Returns the list of global DOF indices for the element based on the DOFs stored in element.dofs.
+    
+        Returns
+        -------
+        nodal_dofs : list of int
+            List of global DOF indices for the element's DOFs.
+        """
+        local_dof_indices = []
+        Ndof = Element.maxNdof  
+        dof_mapping = self.dof_mapping  # Assuming self.dof_mapping is defined in the Element class
+    
+        for i, node in enumerate(self.nodes):
+            node_dofs = self.dofs[node.id]
+            for dof_name in node_dofs:
+                if dof_name in dof_mapping:
+                    local_dof_index = dof_mapping[dof_name]
+                    global_dof_index = local_dof_index + i * Ndof
+                    local_dof_indices.append(global_dof_index)
+                else:
+                    raise ValueError(f"DOF '{dof_name}' is not recognized.")
+        
+        return local_dof_indices
 
     def Stiffness(self, omega):
         '''
         function to determine the global stiffness matrix of the element, as created from its local elements
         '''
+        # get the local dof indices 
+        local_dof_indices = self.get_local_element_dof_indices()
+        # number of dofs in the current Element
+        Ndof = len(local_dof_indices)
         
-        Ndof = sum([len(dofs) for dofs in self.dofs.values()])
         # intialise empty stiffness matrix
         k_local = np.zeros( (Ndof, Ndof), dtype=complex) 
-        
+                       
         # loop over all present elements and add their contribution to the full matrix
-        for element_type, element in self.element_types.items():
-            # k_loc += element.FullStiffness(omega)
-            k_local += self.FullStiffness(element,omega)
+        for element_type_name, element_type in self.element_types.items():
+            # add the stiffness of the element_type on the nodes present in the current Element
+            k_local += self.FullStiffness(element_type,omega,Ndof)[np.ix_(local_dof_indices,local_dof_indices)]
         
-        # return the full global stiffness matrix
-        k_glob = ( self.Rt @ k_local ) @ self.R 
+        # return the full global stiffness matrix by applying the rotation matrix with the dofs present
+        k_glob = ( self.R[np.ix_(local_dof_indices,local_dof_indices)].T @ k_local ) @ self.R[np.ix_(local_dof_indices,local_dof_indices)] 
                 
         return k_glob
 
-    def FullStiffness(self, element, omega):
+    def FullStiffness(self, element_type, omega, Ndof):
         '''
         Function that assembles the full stiffness matrix based on the local stiffness matrix. 
         
         For example, it will translate the 2x2 K_local of the rod to the full 6x6 matrix which it is in 2D
         
         '''
+        # get the element_type dofs
+        element_type_dofs = self.get_element_type_dofs(element_type)
+                
+        # initialise NdofxNdof empty complex matrix
+        K_full = np.zeros( (2*Element.maxNdof, 2*Element.maxNdof), dtype=complex) 
         
-        # get nodal dofs
-        nodal_dofs = self.GetNodalDofs(element)
-        
-        # initialise 6x6 empty complex matrix
-        K_full = np.zeros( (Ndof, Ndof), dtype=complex) 
-        
-        # calculate local stiffness matrix of the element
-        K_local = element.LocalStiffness(omega)
-        
-        # assign to correct locations in full matrix
-        for i, row in enumerate(nodal_dofs):
-            for j, col in enumerate(nodal_dofs):
-                K_full[row, col] = K_local[i, j]
+        # assign the matrix
+        K_full[np.ix_(element_type_dofs, element_type_dofs)] = element_type.LocalStiffness(omega)
                 
         return K_full 
 
+# %% loads
+
+    def AddDistributedLoad(self,**q):
+        '''
+        docstring
+        '''
+        
+        # assign unpacked load to element list of loads
+        for dof, load in q.items():
+            if dof not in self.element_loads.keys():
+                self.element_loads[dof] = load
+            else:
+                print(f'Load already added')                
+                
 # %% prescribing dof things    
     def fix_dof(self, node, *dofs):
         """
@@ -305,7 +347,8 @@ class Element:
         if node in self.nodes:    
             for dof, value in changes.items():           
                 self.dofs[node.id][dof] = value
-                
+
+#%% properties of the Element                
     def geometrical_properties(self,alpha = 0):
         '''
         Determines the following geometrical properties of the element:
@@ -433,7 +476,8 @@ class Element:
             del self.element_types[element_type]
         except Exception as e:
             print(f'An error has occurred whilst trying to remove a section - {e}')
-    
+
+# %% help functions    
     def create_local_dofs_vector(self):
         """
         Creates a vector with ones where the local DOFs are present and zeros elsewhere.
@@ -634,6 +678,8 @@ class Element:
     
         return False
                         
-        
+
+    
+    
     
     
