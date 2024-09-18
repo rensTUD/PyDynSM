@@ -97,15 +97,24 @@ class Analysis:
             if not node.nodal_loads:
                 continue
             
-            # get dofs of the node
-            dofs = node.dof_indices
+            node_dof_container = node.dof_container
             
-            # or loop over dofs and do it here
-            for dof in dofs.keys():
-                # check if dof is in nodal loads
-                if dof in node.nodal_loads:
-                    # if yes, evaluate if necessary and assign
-                    f_global[dofs.get(dof)] += node.nodal_loads[dof](omega) if callable(node.nodal_loads[dof]) else node.nodal_loads[dof]
+            for dof_name, load in node.nodal_loads.items():
+                if node_dof_container.has_dof(dof_name):
+                    dof = node_dof_container.dofs[dof_name]
+                    index = dof.index
+                    if index is not None:
+                        value = load(omega) if callable(load) else load
+                        f_global[index] += value
+            
+            # # get dofs of the node
+            # dofs = node_dof_container.dofs
+            # # or loop over dofs and do it here
+            # for dof_name, dof in node_dof_container.dofs.items():
+            #     # check if dof is in nodal loads
+            #     if dof_name in node.nodal_loads:
+            #         # if yes, evaluate if necessary and assign
+            #         f_global[dof.index] += node.nodal_loads[dof_name](omega) if callable(node.nodal_loads[dof_name]) else node.nodal_loads[dof_name]
         
         # sort by unique / redundant dofs to comply with the structure of L
         f_global_u = f_global[np.ix_(self.unique_dofs)]
@@ -369,24 +378,28 @@ class Analysis:
     
             for node in element.nodes:
                 node_id = node.id
+                element_dof_container = element.dof_containers[node.id]
+                node_dof_container = node.dof_container
                 
                 # Use the DOF configuration of the element for this specific node
-                for dof in element.dofs[node_id].keys():
-                    dof_indices[(node_id, element.id)][dof] = global_index
+                for dof_name, dof in element_dof_container.dofs.items():
+                    dof_indices[(node_id, element.id)][dof_name] = global_index
                     
-                    # Also assign to the element itself as this can be useful
-                    element.dof_indices[node_id][dof] = global_index
+                    # Assign to the element itself as this can be useful
+                    dof.index = global_index
+                    
                     # TODO - SEE HOW TO HANDLE DOF INDICES FOR ELEMENT DOFS AND NODE DOFS IN A NEAT WAY. NOW WE HAVE THREE DIFFERENT DICTIONARIES STORING THEM. NOT THAT EFFICIENT ATM
                     # same for the node, but only if present in node
-                    if dof in node.dofs:
-                        node.dof_indices[dof] = global_index
+                    if node_dof_container.has_dof(dof_name):
+                        node_dof_container.dofs[dof_name].index = global_index
                         
                     global_index += 1  # Increment global index for each DOF
-    
-        return dof_indices    
+        
+        num_dof = global_index                    
+        return dof_indices, num_dof
 
 
-    def build_matrix_B(self, nodes, elements, dof_indices):
+    def build_matrix_B(self, nodes, elements, dof_indices, num_dof):
         """
         Builds the constraint matrix B for the structural system.
     
@@ -404,7 +417,7 @@ class Analysis:
         B : numpy.ndarray
             The constraint matrix B.
         """
-        num_dof = sum(len(dofs) for element in elements for dofs in element.dofs.values())  # Calculate total DOFs based on the elements global dofs at each connection
+        # num_dof = sum(len(dofs) for element in elements for dofs in element.dof_container.values())  # Calculate total DOFs based on the elements global dofs at each connection
     
         # Preallocate a larger matrix to avoid expensive np.vstack() operations
         B = np.zeros((num_dof, num_dof))
@@ -420,10 +433,10 @@ class Analysis:
                 # only continue if connected indices are actually found
                 if connected_indices:
                     # 
-                    for dof in node.dofs.keys():
+                    for dof_name, nodal_dof in node.dof_container.dofs.items():
                         # get all dofs of elements that join at the current node and have the same constraint as the nodal dof
-                        all_dofs = [indices[dof] for element, indices in connected_indices 
-                                    if dof in indices and element.dofs[node.id][dof] == node.dofs[dof]]
+                        all_dofs = [indices[dof_name] for element, indices in connected_indices 
+                                    if dof_name in indices and element.dof_containers[node.id].dofs[dof_name].value == nodal_dof.value]
                         
                         # continue only if we still have connected dofs
                         if len(all_dofs) > 1:
@@ -469,9 +482,9 @@ class Analysis:
             List of lists where each sublist contains a DOF index and its value.
         """
         
-        self.dof_indices = self.assign_dof_indices(nodes, elements)
+        self.dof_indices, num_dof = self.assign_dof_indices(nodes, elements)
         
-        self.B = self.build_matrix_B(nodes, elements, self.dof_indices)
+        self.B = self.build_matrix_B(nodes, elements, self.dof_indices,num_dof)
         
         self.unique_dofs, self.redundant_dofs = self.find_unique_redundant_dofs(self.B)
         
@@ -480,7 +493,7 @@ class Analysis:
         self.free_dofs, self.constrained_dofs = self.classify_free_constrained_dofs(nodes, elements, np.array(self.unique_dofs), self.dof_indices)
 
     
-    def classify_free_constrained_dofs(self, nodes, elements, unique_dofs, dof_indices):
+    def classify_free_constrained_dofs_old(self, nodes, elements, unique_dofs, dof_indices):
         """
         Classifies unique DOFs as free or constrained (fixed or prescribed) and extracts their indices.
         
@@ -538,6 +551,59 @@ class Analysis:
          # TODO - return sorted list, not per se needed I guess. Furthermore I could change the constrained dofs list to a dictionary
         # return sorted(free_dofs), sorted(constrained_dofs, key=lambda x: x[0])
         return np.array(free_dofs), constrained_dofs
+    
+    def classify_free_constrained_dofs(self, nodes, elements, unique_dofs, dof_indices):
+        """
+        Classifies unique DOFs as free or constrained (fixed or prescribed) and extracts their indices.
+    
+        Parameters
+        ----------
+        nodes : list of Node
+            List of all nodes.
+        elements : list of Element
+            List of elements in the structural system.
+        unique_dofs : list
+            List of indices considered unique.
+        dof_indices : dict
+            Maps (node_id, element_id) to a dict of DOFs and their indices.
+    
+        Returns
+        -------
+        free_dofs : numpy.ndarray
+            Array of indices in `unique_dofs` that are free.
+        constrained_dofs : dict
+            Dictionary mapping DOF indices to their prescribed values.
+        """
+        # Create a mapping from old DOF indices to new indices in unique_dofs
+        unique_dof_dict = {old_index: idx for idx, old_index in enumerate(unique_dofs)}
+    
+        free_dofs = []
+        constrained_dofs = {}
+    
+        # Iterate over all elements and their nodes to classify DOFs
+        for element in elements:
+            for node in element.nodes:
+                node_id = node.id
+                element_id = element.id
+                element_dof_container = element.dof_containers[node_id]
+    
+                # Get DOFs from dof_indices dictionary
+                for dof_name, old_index in dof_indices[(node_id, element_id)].items():
+                    # Check whether the current DOF is in the unique DOFs
+                    new_index = unique_dof_dict.get(old_index)
+    
+                    if new_index is not None:
+                        # Get value from element's DOFContainer
+                        dof_value = element_dof_container.get_dof(dof_name).value
+    
+                        # Classify DOF as free or constrained
+                        if dof_value is None:
+                            free_dofs.append(new_index)
+                        else:
+                            constrained_dofs[new_index] = dof_value
+    
+        return np.array(free_dofs), constrained_dofs
+
                     
                     
                     

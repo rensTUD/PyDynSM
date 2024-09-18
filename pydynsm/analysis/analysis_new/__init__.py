@@ -8,3 +8,5 @@ Created on Wed Jun 12 12:26:39 2024
 from .node import Node
 from .element import Element
 from .analysis import Analysis
+from .dofs import DOF
+from .dofs import DOFContainer

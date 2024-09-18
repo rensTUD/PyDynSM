@@ -58,15 +58,8 @@ elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
 
-# %% Testing for connectivity, B, and L matrices
 
-# %%% get global dofs of the elements
-dofs_indices = s1.get_dofs_elements()
-
-# %%% run the connectivity
-B = s1.get_B_matrix()
-
-# %%%%
+# %%%% run connectivity
 
 s1.run_connectivity()
 

@@ -212,9 +212,9 @@ class Assembler:
         return self.Analysis.assign_dof_indices(self.nodes, self.elements)
 
     def get_B_matrix(self):
-        dof_indices = self.get_dofs_elements()
+        dof_indices, num_dof = self.get_dofs_elements()
         
-        return self.Analysis.build_matrix_B(self.nodes, self.elements, dof_indices)
+        return dof_indices, self.Analysis.build_matrix_B(self.nodes, self.elements, dof_indices,num_dof)
     
     def run_connectivity(self):
         self.Analysis.connectivity(self.nodes, self.elements)

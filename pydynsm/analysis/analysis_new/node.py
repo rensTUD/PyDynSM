@@ -8,6 +8,10 @@ Created on Thu Feb 29 13:34:56 2024
 # %% Import dependencies
 import numpy as np
 from collections import defaultdict
+from typing import Optional, Dict
+from .dofs import DOF
+from .dofs import DOFContainer
+
 
 # %% class definition
 class Node:
@@ -66,32 +70,37 @@ class Node:
         
         # dofs of the node: {dof: value} - None = Free, 0 = Fixed, value = presribed
         self.config = config
+        
         # Load any default dof_config or apply custom one SHOULD THINK WHETHER THIS IS USEFULL OR JUST LEAVE IT FULLY AUTOMATIC BASED ON APPLIED SECTIONS
         self.dof_config = dof_config if dof_config else self.dof_configurations[config]
-        # self.dofs = {dof: None for dof in self.dof_configurations[config]}  # Initialize all DOFs to None
-        self.dofs = {dof: None for dof_list in self.dof_config for dof in dof_list}
         
-        self.dof_indices = {}
+        # initialise the DOFcontainer
+        self.dof_container = DOFContainer()
         
-        # location in space
+        # Set up DOFs based on configuration
+        for dof_list in self.dof_config:
+            for dof_name in dof_list:
+                self.dof_container.set_dof(dof_name)
+                
+        # set the location in space
         self.x     = x
         self.z     = z
         self.y     = y
         
-        # initialise empty forces dictionary
-        self.nodal_loads = defaultdict(dict)
-        
         # node name
         self.id = Node.nn
+        Node.nn   += 1 # increment the class variables
         
-        # empty connected_elements list
+        # Initialise empty lists needed for later
+        self.nodal_loads = defaultdict(dict)
         self.connected_elements = []
         
-        # increment the class variables
-        Node.nn   += 1
+        
+        
 
     def GlobalDofs(self):
-        return [dof_indice for dof_indice in self.dof_indices.values()]    
+        """Returns a list of global DOF indices for the node."""
+        return [dof.index for dof in self.dof_container.dofs.values() if dof.index is not None]
 
     def update_element_dof(self,changes=None):
         """
@@ -106,28 +115,30 @@ class Node:
             for element in self.connected_elements:
                 element.update_node_dofs(self,changes)
                 
-    def apply_dof_change_to_elements(self, changed_dof):
+    def apply_dof_change_to_elements(self, changed_dof_name):
             """
             Applies the change in a specific global DOF to the connected elements,
             mapping the global DOF to the corresponding local and global DOFs in each element.
     
             Parameters
             ----------
-            changed_dof : str
+            changed_dof_name : str
                 The name of the global DOF that has changed (e.g., 'x', 'phi_y').
             """
+            # get the dof
+            dof = self.dof_container.get_dof(changed_dof_name)
             # Check if the changed_dof is part of the node's current DOFs
-            if changed_dof not in self.dofs:
-                raise ValueError(f"DOF '{changed_dof}' is not part of the node's current configuration.")
+            if dof is None:
+                raise ValueError(f"DOF '{changed_dof_name}' is not part of the node's current configuration.")
             
             # Get the changed DOF value
-            changed_value = self.dofs[changed_dof]
+            changed_value = dof.value
     
             # Propagate the change to all connected elements
             for element in self.connected_elements:
-                element.apply_global_dof_change(self, changed_dof, changed_value)
+                element.apply_global_dof_change(self, changed_dof_name, changed_value)
     
-            print(f"Global DOF '{changed_dof}' change applied to connected elements.")                
+            print(f"Global DOF '{changed_dof_name}' change applied to connected elements.")                
 
     def connect_element(self, element):
         """
@@ -181,32 +192,20 @@ class Node:
         """
         changes = {}
         try:
-            for dof, value in dofs.items():
-                if dof not in self.dofs:
-                    raise ValueError(f"DOF '{dof}' is not available in the current configuration. Available DOFs: {self.dof_config}")
-                if self.dofs[dof] != value:
-                    self.dofs[dof] = value
-                    changes[dof] = value
+            for dof_name, value in dofs.items():
+                if not self.dof_container.has_dof(dof_name):
+                    raise ValueError(f"DOF '{dof_name}' is not available in the current configuration. Available DOFs: {self.dof_config}")
+                dof = self.dof_container.get_dof(dof_name)
+                if dof.value != value:
+                    dof.value = value
+                    changes[dof_name] = value
         except ValueError as e:
             print(e)
             return
         
         if changes:
-            for element in self.connected_elements:
-                element.update_node_dofs(self,changes)
+            self.apply_dof_change_to_elements(changed_dof_name=dof_name)
 
-    # def AddLoad(self, p):
-    #     """
-    #     Adds the given loads to the node.
-
-    #     The load is a vector p, which includes the load in the x and y direction and a moment. 
-    #     These loads are added to the existing loads of the node.
-
-    #     Parameters:
-    #         p (numpy.array): A vector containing the load in the x direction, the load in the y direction, 
-    #                          and the moment. 
-    #     """
-    #     self.nodal_forces.append(p)
         
     def AddLoad(self,**loads):
         '''

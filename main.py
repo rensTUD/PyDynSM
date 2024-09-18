@@ -97,10 +97,10 @@ elem3.fix_dof(node2,'z')
 # %% Testing for connectivity, B, and L matrices
 
 # %%% get global dofs of the elements
-dofs_indices = s1.get_dofs_elements()
+dof_indices, num_dof = s1.get_dofs_elements()
 
 # %%% run the connectivity
-B = s1.get_B_matrix()
+dof_indices, B = s1.get_B_matrix()
 
 # %%%%
 
