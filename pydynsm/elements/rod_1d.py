@@ -17,7 +17,7 @@ class Rod_1D(StructuralElement):
     def __init__(self, rhoA, EA, L, ksi = None):
         
         # define what dofs the rod contributes to and initialise
-        dofs = 'x'
+        dofs = [0]
         super().__init__(dofs)
         
         # Initialise lcoal rod element with necessary parameters
@@ -69,14 +69,12 @@ class Rod_1D(StructuralElement):
         # assign local variables for ease of coding
         L = self.L
         
-        # unpack the load which is only one load in this case
-        q = q[0]
 
         # determine wavenumber
         beta_r = self.ElementWaveNumbers(omega)
         
         
-        el = np.array([(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)])
+        el = [(np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r), (np.cos(beta_r*L) - 1.0)*q/(np.sin(beta_r*L)*beta_r)]
         
         return el
 
