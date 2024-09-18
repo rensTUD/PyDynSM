@@ -32,7 +32,7 @@ class Rod1D_foundation(StructuralElement):
             ksi: value. Damping of the element's material [-]
         """
         # define what dofs the rod contributes to and initialise
-        dofs = [0]
+        dofs = ['x']
         super().__init__(dofs)
 
         # Initialise local rod element with necessary parameters

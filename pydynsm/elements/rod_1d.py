@@ -17,7 +17,7 @@ class Rod_1D(StructuralElement):
     def __init__(self, rhoA, EA, L, ksi = None):
         
         # define what dofs the rod contributes to and initialise
-        dofs = [0]
+        dofs = ['x']
         super().__init__(dofs)
         
         # Initialise lcoal rod element with necessary parameters

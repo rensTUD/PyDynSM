@@ -16,7 +16,7 @@ class EB_Beam(StructuralElement):
     def __init__(self, rhoA, EI, L, ksi = None):
         
         # define what dofs the eb beam contributes to and initialise
-        dofs = [1,2]
+        dofs = ['z','phi_y']
         super().__init__(dofs)
         
         # Initialise lcoal rod element with necessary parameters

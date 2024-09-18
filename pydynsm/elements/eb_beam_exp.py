@@ -15,8 +15,6 @@ from .structuralelement import StructuralElement, ElementFactory
 class EulerBernoulliBeam(StructuralElement):
     """Class for Euler-Bernoulli beam element."""
 
-    element_name = 'EulerBernoulli Beam'
-
     def __init__(self, rho, A, E, Ib, L, ksi=None):
         """
         Initialise EulerBernoulliBeam class.
@@ -30,7 +28,7 @@ class EulerBernoulliBeam(StructuralElement):
             ksi : value. Material damping [-], default: none
         """
         # define the of dofs the EulerBernoulli beam and initialise
-        dofs = [1, 2]
+        dofs = ['z','phi_y']
         super().__init__(dofs)
 
         # Initialise local beam element with necessary parameters

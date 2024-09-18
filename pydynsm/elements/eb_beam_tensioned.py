@@ -31,7 +31,7 @@ class TensionedEulerBernoulliBeam(StructuralElement):
             ksi : value. Material damping [-], default: none
         """
         # define what dofs the eb beam contributes to and initialise
-        dofs = [1, 2]
+        dofs = ['z','phi_y']
         super().__init__(dofs)
 
         # Initialise local beam element with necessary parameters

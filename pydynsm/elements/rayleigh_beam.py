@@ -31,7 +31,7 @@ class RayleighBeam(StructuralElement):
         """
         # define what dofs the rayleigh beam contributes to and initialise
         # the dofs are w and phi, so 1 and 2
-        dofs = [1, 2]
+        dofs = ['z','phi_y']
         super().__init__(dofs)
 
         # Initialise local beam element with necessary parameters
