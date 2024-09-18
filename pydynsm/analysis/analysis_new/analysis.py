@@ -38,25 +38,25 @@ class Analysis:
         # load k_global
         k_global = np.zeros((self.num_dofs, self.num_dofs), complex)
         
-        # set up block matrix
+        # set up block matrix per element
         for e in elements:
             elmat = e.Stiffness(omega)
             idofs = e.GlobalDofs()
             k_global[np.ix_(idofs, idofs)] = elmat
             
-        # sort by unique / redundant dofs
+        # sort by unique / redundant dofs to comply with the structure of L
         k_uu = k_global[np.ix_(self.unique_dofs,self.unique_dofs)]
         k_ur = k_global[np.ix_(self.unique_dofs,self.redundant_dofs)]
         k_ru = k_global[np.ix_(self.redundant_dofs,self.unique_dofs)]
         k_rr = k_global[np.ix_(self.redundant_dofs,self.redundant_dofs)]
         
-        K_global = np.block([[k_uu, k_ur],
+        k_global = np.block([[k_uu, k_ur],
                                     [k_ru, k_rr]])
         
         # constrain by using L
-        K_global_unique = self.L.T @ K_global @ self.L
+        K_global = self.L.T @ k_global @ self.L
     
-        return K_global_unique
+        return K_global
 
     def GlobalForce(self, nodes, elements, omega):
         """
@@ -92,16 +92,31 @@ class Analysis:
             # for element_load in element.element_loads:
             f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element.element_loads, omega)
         
-        # get all nodal loads
-        for n in nodes:
-            if not n.nodal_forces:
+        # get all nodal loads - ASSUMING EVERYTHING IS ALREADY WITHIN GLOBAL DIRECTIONS 
+        for node in nodes:
+            if not node.nodal_loads:
                 continue
             
-            for nodal_force in n.nodal_forces:
-                force_components = np.array([(force(omega) if callable(force) else force) for force in nodal_force])
-                f_global[n.dofs] += force_components
+            # get dofs of the node
+            dofs = node.dof_indices
             
-        return f_global
+            # or loop over dofs and do it here
+            for dof in dofs.keys():
+                # check if dof is in nodal loads
+                if dof in node.nodal_loads:
+                    # if yes, evaluate if necessary and assign
+                    f_global[dofs.get(dof)] += node.nodal_loads[dof](omega) if callable(node.nodal_loads[dof]) else node.nodal_loads[dof]
+        
+        # sort by unique / redundant dofs to comply with the structure of L
+        f_global_u = f_global[np.ix_(self.unique_dofs)]
+        f_global_r = f_global[np.ix_(self.redundant_dofs)]
+        
+        f_global = np.hstack((f_global_u,f_global_r))
+        
+        # constrain by using L
+        F_global = self.L.T @ f_global 
+        
+        return F_global
 
     def GlobalConstrainedStiffness(self, nodes, elements, omega):
         """
@@ -145,8 +160,8 @@ class Analysis:
         k_global = self.GlobalStiffness(nodes, elements, omega)
         f_global = self.GlobalForce(nodes, elements, omega)
         
-        constrained_indices = [dof[0] for dof in self.constrained_dofs]
-        constrained_values = [dof[1] for dof in self.constrained_dofs]
+        constrained_indices = list(self.constrained_dofs.keys())
+        constrained_values = list(self.constrained_dofs.values())
         
         K_free_constrained = k_global[np.ix_(self.free_dofs, constrained_indices)]
         F_free = f_global[self.free_dofs]
@@ -189,13 +204,13 @@ class Analysis:
         reactions : numpy.ndarray
             Support reactions.
         """
-        constrained_indices = [dof[0] for dof in self.constrained_dofs]
-        constrained_values = [dof[1] for dof in self.constrained_dofs]
+        constrained_indices = list(self.constrained_dofs.keys())
+        constrained_values = list(self.constrained_dofs.values())
         
         Kcf = k_global[np.ix_(constrained_indices, self.free_dofs)]
         Kcc = k_global[np.ix_(constrained_indices, constrained_indices)]
         
-        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[constrained_indices]
+        return (Kcf @ u_free) + (Kcc @ constrained_values) - f_global[np.ix_(constrained_indices)]
 
     def FullDisplacement(self, u_free):
         """
@@ -211,13 +226,13 @@ class Analysis:
         u_full : numpy.ndarray
             Full displacement vector.
         """
-        constrained_indices = [dof[0] for dof in self.constrained_dofs]
-        constrained_values = [dof[1] for dof in self.constrained_dofs]
+        constrained_indices = list(self.constrained_dofs.keys())
+        constrained_values = list(self.constrained_dofs.values())
         
         u_full = np.zeros(len(self.free_dofs) + len(constrained_indices), dtype=complex)
         
-        u_full[self.free_dofs] = u_free
-        u_full[constrained_indices] = constrained_values
+        u_full[np.ix_(self.free_dofs)] = u_free
+        u_full[np.ix_(constrained_indices)] = constrained_values
         
         return u_full
 
@@ -281,16 +296,23 @@ class Analysis:
         ValueError
             If the matrix B_r is singular and cannot be inverted.
         """
-        B_r = B[:, redundant_dofs]
-        B_u = B[:, unique_dofs]
-
-        try:
-            B_r_inv = inv(B_r)
-            L_lower = -B_r_inv @ B_u
-            L = np.vstack((np.eye(len(unique_dofs)), L_lower))
+        # check if there are any redundant dofs
+        if len(redundant_dofs) != 0:
+            B_r = B[:, redundant_dofs]
+            B_u = B[:, unique_dofs]
+    
+            try:
+                B_r_inv = inv(B_r)
+                L_lower = -B_r_inv @ B_u
+                L = np.vstack((np.eye(len(unique_dofs)), L_lower))
+                return L
+            
+            except np.linalg.LinAlgError:
+                raise ValueError("Matrix B_r is singular and cannot be inverted.")
+        # if not, return L solely based on unique dofs
+        else:
+            L = np.eye(len(unique_dofs))
             return L
-        except np.linalg.LinAlgError:
-            raise ValueError("Matrix B_r is singular and cannot be inverted.")
 
     def assign_dof_indices_old(self, nodes, elements):
         """

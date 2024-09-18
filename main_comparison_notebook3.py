@@ -32,67 +32,31 @@ q_b = 1*1e06 + 0j
 L  = 1
 omega = 100  
 ksi = 0.01 
-
+omega_f = omega
 
 
 # %%% Create nodes from the assembler
 
 
 node1 = s1.CreateNode(0,0)
-node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
-node3 = s1.CreateNode(2*L,L)
-node4 = s1.CreateNode(L,2*L)
+node2 = s1.CreateNode(L,0)
 
 # %%% Now set the constraints directly onto the nodes
 node1.fix_node('x', 'z')
-node2.fix_node('x')
-node3.fix_node('x','z', 'phi_y')
-node4.fix_node('x','z')
-# %%%% test adding a load to the node
+node2.fix_node('z')
 
-# define a lambda function running over omega for p_x
-# TODO - see how to add a time domain load instead of freq domain load
-omega_f = 100
-p_x = lambda omega: 10 if omega == omega_f else 0
-
-# add a load directly to node2
-
-node1.AddLoad(x=p_x)
-
-# %%%% Plot nodes
-
-s1.PlotStructure()
 
 # %%% Create element
 
 # initialise element by setting its nodes and calling it from the assembler
 elem = s1.CreateElement([node1, node2])
-elem2 = s1.CreateElement([node2, node3])
-elem3 = s1.CreateElement([node2, node4])
-# %%% try to set a section that is not implemented yet
-elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
+
+
  
 # %%% now set the sections (or element types for that matter)
 elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
-elem2.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem2.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
-
-elem3.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem3.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
-# %%% test adding dof to an element that is not supported by the local dofs of that element
-
-elem.fix_dof(node2, 'z')
-
-
-# %%%%
-elem.free_dof(node2, 'z')
-
-# %%%% 
-
-elem3.free_dof(node2,'x')
-elem3.fix_dof(node2,'z')
 
 # %% Testing for connectivity, B, and L matrices
 
@@ -113,8 +77,8 @@ s1.run_connectivity()
 
 # %%% Add distributed load per DOF in global coord system
 
-q_r = lambda omega: 1 if omega == omega_f else 0
-q_b = lambda omega: 1 if omega == omega_f else 0
+q_r = lambda omega: 0 if omega == omega_f else 0
+q_b = lambda omega: 1e6 if omega == omega_f else 0
 elem.AddDistributedLoad(x=q_r, z=q_b)
 
 

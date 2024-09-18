@@ -79,7 +79,7 @@ class Node:
         self.y     = y
         
         # initialise empty forces dictionary
-        self.element_loads = defaultdict(dict)
+        self.nodal_loads = defaultdict(dict)
         
         # node name
         self.id = Node.nn
@@ -89,6 +89,9 @@ class Node:
         
         # increment the class variables
         Node.nn   += 1
+
+    def GlobalDofs(self):
+        return [dof_indice for dof_indice in self.dof_indices.values()]    
 
     def update_element_dof(self,changes=None):
         """
@@ -207,7 +210,7 @@ class Node:
         
     def AddLoad(self,**loads):
         '''
-        Adds distributed loads to the element.
+        Adds distributed loads to the Node.
     
         Parameters
         ----------
@@ -217,10 +220,10 @@ class Node:
         
         # Assign unpacked loads to the element's list of loads
         for dof, load in loads.items():
-            if dof not in self.element_loads.keys():
+            if dof not in self.nodal_loads.keys():
                 self.nodal_loads[dof] = load
             else:
-                print(f'Load already added for DOF {dof}')        
+                print(f'Load already added for DOF {dof}')  
 
     def get_coords(self):
         """
