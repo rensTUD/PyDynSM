@@ -95,9 +95,6 @@ class Node:
         self.nodal_loads = defaultdict(dict)
         self.connected_elements = []
         
-        
-        
-
     def GlobalDofs(self):
         """Returns a list of global DOF indices for the node."""
         return [dof.index for dof in self.dof_container.dofs.values() if dof.index is not None]

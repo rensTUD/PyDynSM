@@ -106,15 +106,6 @@ class Analysis:
                     if index is not None:
                         value = load(omega) if callable(load) else load
                         f_global[index] += value
-            
-            # # get dofs of the node
-            # dofs = node_dof_container.dofs
-            # # or loop over dofs and do it here
-            # for dof_name, dof in node_dof_container.dofs.items():
-            #     # check if dof is in nodal loads
-            #     if dof_name in node.nodal_loads:
-            #         # if yes, evaluate if necessary and assign
-            #         f_global[dof.index] += node.nodal_loads[dof_name](omega) if callable(node.nodal_loads[dof_name]) else node.nodal_loads[dof_name]
         
         # sort by unique / redundant dofs to comply with the structure of L
         f_global_u = f_global[np.ix_(self.unique_dofs)]

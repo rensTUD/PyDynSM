@@ -85,11 +85,12 @@ class Element:
         
         # initialise empty list with nodal forces due to element loads
         self.element_loads = defaultdict(dict)
-        
+
+# %% Nodes and Dofs
+
     def GlobalDofs(self):
         return [dof.index for node in self.nodes for dof in self.dof_containers[node.id].dofs.values()]        
 
-# %% stiffness part
     def check_dofs(self, dofs):
         """
         Checks which DOFs are present and returns their numerical values.
@@ -161,6 +162,8 @@ class Element:
                 local_dof_indices.append(local_dof_index)
         
         return local_dof_indices
+
+# %% stiffness
 
     def Stiffness(self, omega):
         '''
@@ -270,7 +273,8 @@ class Element:
         
         return q_full             
 
-#%% properties of the Element                
+#%% properties of the Element    
+            
     def geometrical_properties(self,alpha = 0):
         '''
         Determines the following geometrical properties of the element:
@@ -354,7 +358,7 @@ class Element:
         # full rotation matrix (12x12)
         self.R = np.block([[Y, np.zeros((3,9))], [np.zeros((3,3)), Y, np.zeros((3,6))], [np.zeros((3,6)), Y, np.zeros((3,3))], [np.zeros((3,9)), Y]])
         
-        
+# %% Setting / removing a section        
     def SetSection(self, element_type, props):
         '''
         This function serves to set the elements, we will have to think how we do this properly but this is an initial set-up
@@ -400,7 +404,7 @@ class Element:
             print(f'An error has occurred whilst trying to remove a section - {e}')
 
                 
-# %% prescribing dof things    
+# %% Prescribing dofs   
     def fix_dof(self, node, *dofs):
         """
         Fixes specified DOFs at a given node in the element.
