@@ -24,9 +24,13 @@ Assembler = PDM.Assembler
 s1 = Assembler('beam',analysis_type='new')
 
 # %%% Parameters
+E = 210e9
 EA = 7e6
+A = EA/E
 EI = 1.5 * 7e06 
+I = EI/E
 rhoA = 1e03 
+rho = rhoA/A
 q_r = 0*1e02 + 0j 
 q_b = 1*1e06 + 0j 
 L  = 1
@@ -54,9 +58,11 @@ elem = s1.CreateElement([node1, node2])
 
  
 # %%% now set the sections (or element types for that matter)
-elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+# elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
+# elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
 
+elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
 
 # %%%% run connectivity

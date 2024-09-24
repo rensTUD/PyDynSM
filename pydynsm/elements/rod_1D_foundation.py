@@ -8,7 +8,7 @@ Created on Thu Apr 18 17:27:16 2024
 # import dependencies
 import numpy as np
 import sys
-from structuralelement import StructuralElement, ElementFactory
+from .structuralelement import StructuralElement, ElementFactory
 
 # %% class definition
 

@@ -13,7 +13,7 @@ from .structuralelement import StructuralElement, ElementFactory
 # %% class definition
 
 
-@ElementFactory.ElementType('Rod')
+@ElementFactory.ElementType('Rod')#, required_parameters = ['rho', 'A', 'E', 'L'])
 class Rod1D(StructuralElement):
     """Class for 1D rod element."""
 

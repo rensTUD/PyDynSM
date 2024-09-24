@@ -11,7 +11,7 @@ from .structuralelement import StructuralElement, ElementFactory
 # %% class definition
 
 
-# TODO - update
+# TODO - update!!!!!!
 
 @ElementFactory.ElementType('EulerBernoulli Beam')
 class EulerBernoulliBeam(StructuralElement):

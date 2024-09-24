@@ -9,7 +9,7 @@ Created on Thu Apr 18 17:26:31 2024
 
 import numpy as np
 from abc import ABC, abstractmethod
-
+import inspect
 # %% Class definitions
 '''
 Considerations:
@@ -37,11 +37,8 @@ class StructuralElement(ABC):
     
     def __init__(self,dofs):
         
-        # leave this here
-        self.Ndof = 3
-        
+        # assign dofs in text
         self.dofs = dofs
-        self.nodal_dofs = self.GetNodalDofs(self.dofs,self.Ndof)
         
         # check if an element name is assigned
         if self.element_name is None:
@@ -185,24 +182,60 @@ class ElementFactory:
     @classmethod
     def RegisterElement(cls, element_class):
         """
-        Registers a new element class in the factory under its 'name' attribute.
+        Registers a new element class in the factory under its 'name' attribute. 
+        Also checks the args and kwargs of the element type, and sets the args as required parameters.
         """
         if not hasattr(element_class, 'element_name') or not isinstance(element_class.element_name, str):
             raise ValueError("Element classes must have a 'name' attribute of type str before registration.")
-            
-        cls.elements[element_class.element_name] = element_class
+        
+        # Inspect the __init__ method and extract parameter information
+        init_signature = inspect.signature(element_class.__init__)
+        
+        # Get required parameters (those without default values)
+        required_params = [
+            param.name for param in init_signature.parameters.values()
+            if param.default == param.empty and param.name != 'self'
+        ]
+        
+        # Get all parameters (both required and optional)
+        all_params = [
+            param.name for param in init_signature.parameters.values() if param.name != 'self'
+        ]
+        
+        # Store the class along with its required and all parameters in the factory
+        cls.elements[element_class.element_name] = {
+            'class': element_class,
+            'required_params': required_params,
+            'all_params': all_params
+        }
+        
     
     @classmethod
     def CreateElement(cls, element_name, **kwargs):
         """
-        Create an instance of an element by name. If the element type is not found,
-        raise a ValueError with a message listing available element types.
+        Create an instance of an element by name. Validates that all required parameters are provided.
         """
         if element_name not in cls.elements:
             available_types = ", ".join(cls.elements.keys())
             raise ValueError(f"No element registered with name: {element_name}. Available types are: {available_types}")
-        element_class = cls.elements[element_name]
+               
+        # Retrieve the stored class and parameter info
+        element_info = cls.elements[element_name]
+        element_class = element_info['class']
+        required_params = element_info['required_params']
+        all_params = element_info['all_params']
+        
+        # Validate the provided kwargs against required and all params
+        missing_params = [param for param in required_params if param not in kwargs]
+        extra_params = [param for param in kwargs if param not in all_params]
+
+        if missing_params:
+            raise ValueError(f"Missing required parameters for element '{element_name}': {', '.join(missing_params)}")
+        if extra_params:
+            raise ValueError(f"Unexpected parameters provided for element '{element_name}': {', '.join(extra_params)}")
+                
         return element_class(**kwargs)
+        
     
     @classmethod
     def ListElementTypes(cls):
@@ -212,13 +245,18 @@ class ElementFactory:
         return list(cls.elements.keys())
     
     @classmethod
-    def ElementType(cls, name):
+    def ElementType(cls, name: str):#, required_parameters: list | None = None):
         """
         Decorator to register new element types by setting the 'name' attribute
         on the element class and then registering it.
         """
         def decorator(element_class):
+            # set element class name
             setattr(element_class, 'element_name', name)  # Explicitly set the name attribute
+            # # set required parameters if present
+            # if required_parameters is not None:
+            #     setattr(element_class, 'required_parameters', required_parameters)
+            # register the element class
             cls.RegisterElement(element_class)   # Register the class using the newly set name
             return element_class
         return decorator
