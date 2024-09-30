@@ -87,7 +87,8 @@ class Assembler:
             
         self.StructurePlotter.ShowStructure(f'Structure Configuration: {self.name}')
 
-# %% Stiffness, Force, Displacements
+# %% ANALAYSIS 
+# i.e. Stiffness, Force, Displacements
 
     def GlobalStiffness(self, omega):
         """
@@ -206,6 +207,21 @@ class Assembler:
             Full displacement vector.
         """
         return self.Analysis.FullDisplacement(u_free)
+    
+    def ElementDisplacements(self, u_full, omega, num_points=20):
+        '''
+        Returns all element displacements
+        '''
+        
+        return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points)
+    
+# %% POSTPROCESS
+
+    def PlotElementDisplacements(self,Element_displacements: dict, scale: float = 1.0) -> None:
+        '''
+        Plots the displacements
+        '''
+        self.StructurePlotter.PlotDisplacements(self.elements, Element_displacements, scale=scale)
 
 # %% Testing area
     def get_dofs_elements(self):

@@ -31,6 +31,15 @@ class DOFContainer:
     def get_dof(self, dof_name: str) -> Optional[DOF]:
         """Retrieve a DOF."""
         return self.dofs.get(dof_name)
+    
+    def set_dof_value(self,dof_name: str, value: Optional[float]):
+        '''
+        Sets the value of the dof:
+            None = Free
+            0 = Fixed
+            other float = displacement amplitude in frequency domain
+        '''
+        self.dofs[dof_name].value = value
 
     def has_dof(self, dof_name: str) -> bool:
         """Check if a DOF exists."""

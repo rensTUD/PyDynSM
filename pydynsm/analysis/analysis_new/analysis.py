@@ -97,9 +97,12 @@ class Analysis:
             if not node.nodal_loads:
                 continue
             
+            # load the dof container
             node_dof_container = node.dof_container
             
+            # loop over nodal loads
             for dof_name, load in node.nodal_loads.items():
+                # add the load to the dof if dof is present in the current dof config of that node (probably should add this check in the nodal class..)
                 if node_dof_container.has_dof(dof_name):
                     dof = node_dof_container.dofs[dof_name]
                     index = dof.index
@@ -235,6 +238,43 @@ class Analysis:
         u_full[np.ix_(constrained_indices)] = constrained_values
         
         return u_full
+    
+    def ElementDisplacements(self, elements, u_nodes_global, omega, num_points=20):
+        """
+        Gathers the displacements for each element from the element-level calculations.
+    
+        Parameters
+        ----------
+        elements : list of Element
+            List of elements in the structural system.
+        u_nodes_global : numpy.ndarray
+            Global displacements of nodes.
+        omega : float
+            Frequency parameter.
+        num_points : int, optional
+            Number of points along the element to calculate displacements, default is 20.
+    
+        Returns
+        -------
+        element_displacements : dict
+            Dictionary with element IDs as keys and their global displacements (as numpy arrays) as values.
+        """
+        element_displacements = {}
+    
+        for element in elements:
+            # Retrieve global DOF indices for the current element
+            global_dof_indices = element.GlobalDofs()
+    
+            # Extract the relevant global displacements for this element
+            u_element_global = u_nodes_global[global_dof_indices]
+    
+            # Calculate the displacements for the element using its Displacements method
+            u_elem = element.Displacements(u_element_global, omega, num_points)
+    
+            # Store the displacements in the dictionary using the element's ID
+            element_displacements[element.id] = u_elem
+    
+        return element_displacements
 
 # %% specific methods for this method of analysis
 

@@ -39,6 +39,9 @@ class EulerBernoulliBeam(StructuralElement):
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
+        
+        # set q standard to 0
+        self.q = np.zeros(len(dofs))
 
     def LocalStiffness(self, omega):
         """
@@ -142,7 +145,7 @@ class EulerBernoulliBeam(StructuralElement):
 
         return el
 
-    def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
+    def LocalElementDisplacements(self, u_nodes_local, omega, num_points):
         """
         Calculate local displacements w(s) and rotational displacement phi(s).
 
@@ -158,14 +161,8 @@ class EulerBernoulliBeam(StructuralElement):
         L = self.L
         x = np.linspace(0.0, L, num_points)
 
-        # determine nodal displacement in local axis
-        u_node_local = self.R @ u_nodes_global
-
-        # extract only the needed displacements
-        u_node_local = u_node_local(self.dofs)
-
         # calculate coeficients
-        C = self.Coefficients(u_node_local, omega)
+        C = self.Coefficients(u_nodes_local, omega)
 
         # get displacement
         w = self.displacement(x, omega, C)
@@ -175,7 +172,7 @@ class EulerBernoulliBeam(StructuralElement):
 
         return [w, phi]
 
-    def Coefficients(self, u_node_local, omega):
+    def Coefficients(self, u_nodes_local, omega):
         """
         Calculate the coefficients of the general solution, in this case 4.
 
@@ -192,7 +189,9 @@ class EulerBernoulliBeam(StructuralElement):
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
 
         # get distributed load value
-        q = self.q[1]
+        # extract loads
+        q_z = self.q[0]
+        q_phi = self.q[1] 
         # should be like:
         # q_b, q_m = self.
 
@@ -207,8 +206,8 @@ class EulerBernoulliBeam(StructuralElement):
                            1j*np.exp(-1j*alpha_4*L)*alpha_4]])
 
         # TODO - check for correctness
-        u_load = np.array([q/omega**2/rho/A, 0, q/omega**2/rho/A, 0])
-        C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
+        u_load = np.array([q_z/omega**2/rho/A, 0, q_z/omega**2/rho/A, 0])
+        C = np.linalg.inv(A_mat) @ (u_nodes_local + u_load)
         # + np.array([1/(E*Ib*beta_b**4),0,1/(E*Ib*beta_b**4),0]) * q)
 
         return C

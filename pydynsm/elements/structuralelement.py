@@ -144,7 +144,7 @@ class StructuralElement(ABC):
         pass
     
     @abstractmethod
-    def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
+    def LocalElementDisplacements(self, u_nodes_local, omega, num_points):
         '''
         Must return the local element displacements as a function of global displacements, frequency, and number of evaluation points.
         
@@ -156,7 +156,7 @@ class StructuralElement(ABC):
         pass
     
     @abstractmethod
-    def Coefficients(self, u_node_local, omega):
+    def Coefficients(self, u_nodes_local, omega):
         '''
         Must return the solution coefficients of the general solution of the element
         '''

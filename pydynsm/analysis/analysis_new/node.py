@@ -112,30 +112,30 @@ class Node:
             for element in self.connected_elements:
                 element.update_node_dofs(self,changes)
                 
-    def apply_dof_change_to_elements(self, changed_dof_name):
-            """
-            Applies the change in a specific global DOF to the connected elements,
-            mapping the global DOF to the corresponding local and global DOFs in each element.
+    def apply_dof_change_to_elements(self, dof_name, value):
+        """
+        Applies the change in a specific DOF value to the connected elements,
+        mapping the global DOF to the corresponding local and global DOFs in each element.
     
-            Parameters
-            ----------
-            changed_dof_name : str
-                The name of the global DOF that has changed (e.g., 'x', 'phi_y').
-            """
-            # get the dof
-            dof = self.dof_container.get_dof(changed_dof_name)
-            # Check if the changed_dof is part of the node's current DOFs
-            if dof is None:
-                raise ValueError(f"DOF '{changed_dof_name}' is not part of the node's current configuration.")
-            
-            # Get the changed DOF value
-            changed_value = dof.value
+        Parameters
+        ----------
+        dof_name : str
+            The name of the global DOF that has changed (e.g., 'x', 'phi_y').
+        value : Any
+            The value to set for the specified DOF.
+        """
+        # Get the DOF from the container
+        dof = self.dof_container.get_dof(dof_name)
+        
+        # Ensure the DOF exists and is part of the node's current configuration
+        if dof is None:
+            raise ValueError(f"DOF '{dof_name}' is not part of the node's current configuration.")
+        
+        # Propagate the change to all connected elements
+        for element in self.connected_elements:
+            element.apply_global_dof_change(self, dof_name, value)
     
-            # Propagate the change to all connected elements
-            for element in self.connected_elements:
-                element.apply_global_dof_change(self, changed_dof_name, changed_value)
-    
-            print(f"Global DOF '{changed_dof_name}' change applied to connected elements.")                
+        print(f"Global DOF '{dof_name}' with value '{value}' applied to connected elements.")               
 
     def connect_element(self, element):
         """
@@ -187,39 +187,42 @@ class Node:
         ValueError
             If any of the specified DOFs are not in the current configuration.
         """
-        changes = {}
+
         try:
             for dof_name, value in dofs.items():
                 if not self.dof_container.has_dof(dof_name):
                     raise ValueError(f"DOF '{dof_name}' is not available in the current configuration. Available DOFs: {self.dof_config}")
+                
                 dof = self.dof_container.get_dof(dof_name)
                 if dof.value != value:
+                    # set value if is not the same
                     dof.value = value
-                    changes[dof_name] = value
+                    # also apply the change to the connected elements
+                    self.apply_dof_change_to_elements(dof_name,value)
         except ValueError as e:
             print(e)
             return
-        
-        if changes:
-            self.apply_dof_change_to_elements(changed_dof_name=dof_name)
-
-        
-    def AddLoad(self,**loads):
+                
+    def add_load(self,**loads):
         '''
         Adds distributed loads to the Node.
     
         Parameters
         ----------
         **loads : dict
-            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude.
+            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude. e.g. node.AddLoad(x=load_x, y=load_y
         '''
         
         # Assign unpacked loads to the element's list of loads
         for dof, load in loads.items():
-            if dof not in self.nodal_loads.keys():
-                self.nodal_loads[dof] = load
+            # check if dof is present
+            if self.dof_container.has_dof(dof):
+                if dof not in self.nodal_loads.keys():
+                    self.nodal_loads[dof] = load
+                else:
+                    print(f'Load already added for DOF {dof}')  
             else:
-                print(f'Load already added for DOF {dof}')  
+                print(f'Node {self.node_id} does not contain DOF {dof}. Load has not been added.')                    
 
     def get_coords(self):
         """

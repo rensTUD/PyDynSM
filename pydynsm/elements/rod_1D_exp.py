@@ -41,6 +41,9 @@ class Rod1D(StructuralElement):
         self.L = L
         # assisgn ksi if given otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
+        
+        # set q standard to 0
+        self.q = np.zeros(len(dofs))
 
     def LocalStiffness(self, omega):
         """
@@ -122,7 +125,7 @@ class Rod1D(StructuralElement):
 
         return el
 
-    def LocalElementDisplacements(self, u_nodes_global, omega, num_points):
+    def LocalElementDisplacements(self, u_nodes_local, omega, num_points):
         """
         Calcualte the local displacements u(s).
 
@@ -137,21 +140,15 @@ class Rod1D(StructuralElement):
         L = self.L
         x = np.linspace(0.0, L, num_points)
 
-        # determine nodal displacement in local axis
-        u_node_local = self.R @ u_nodes_global
-
-        # extract only the needed displacements
-        u_node_local = u_node_local(self.dofs)
-
         # calculate coeficients
-        C = self.Coefficients(u_node_local, omega)
+        C = self.Coefficients(u_nodes_local, omega)
 
         # get displacement
         u = self.displacement(x, omega, C)
 
         return [u]
 
-    def Coefficients(self, u_node_local, omega):
+    def Coefficients(self, u_nodes_local, omega):
         """
         Calculate the coefficients of the general solution, in this case 2.
 
@@ -177,7 +174,7 @@ class Rod1D(StructuralElement):
 
         # TODO - check
         u_load = np.array([-q/(rho*A*omega**2), -q/(rho*A*omega**2)])
-        C = np.linalg.inv(A_mat) @ (u_node_local + u_load)
+        C = np.linalg.inv(A_mat) @ (u_nodes_local + u_load)
 
         # return the coefficients, in this case 2
         return C

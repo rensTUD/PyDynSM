@@ -24,14 +24,19 @@ Assembler = PDM.Assembler
 s1 = Assembler('beam',analysis_type='new')
 
 # %%% Parameters
+E = 210e9
 EA = 7e6
+A = EA/E
 EI = 1.5 * 7e06 
+I = EI/E
 rhoA = 1e03 
+rho = rhoA/A
 q_r = 0*1e02 + 0j 
 q_b = 1*1e06 + 0j 
 L  = 1
 omega = 100  
 ksi = 0.01 
+omega_f = omega
 
 
 
@@ -57,11 +62,11 @@ p_x = lambda omega: 10 if omega == omega_f else 0
 
 # add a load directly to node2
 
-node1.AddLoad(x=p_x)
+node1.add_load(x=p_x)
 
 # %%%% Plot nodes
 
-s1.PlotStructure()
+# s1.PlotStructure()
 
 # %%% Create element
 
@@ -73,14 +78,14 @@ elem3 = s1.CreateElement([node2, node4])
 elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
  
 # %%% now set the sections (or element types for that matter)
-elem.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-elem2.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem2.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-elem3.SetSection('Rod', {'EA': EA, 'rhoA':rhoA})
-elem3.SetSection('EB Beam', {'EI': EI, 'rhoA':rhoA})
+elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem3.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 # %%% test adding dof to an element that is not supported by the local dofs of that element
 
 elem.fix_dof(node2, 'z')
@@ -93,6 +98,11 @@ elem.free_dof(node2, 'z')
 
 elem3.free_dof(node2,'x')
 elem3.fix_dof(node2,'z')
+
+# %% test change nodal dof
+
+node2.dof_container
+node2.free_node('x')
 
 # %% Testing for connectivity, B, and L matrices
 
@@ -113,8 +123,8 @@ s1.run_connectivity()
 
 # %%% Add distributed load per DOF in global coord system
 
-q_r = lambda omega: 1 if omega == omega_f else 0
-q_b = lambda omega: 1 if omega == omega_f else 0
+q_r = lambda omega: 1e2 if omega == omega_f else 0
+q_b = lambda omega: 1e6 if omega == omega_f else 0
 elem.AddDistributedLoad(x=q_r, z=q_b)
 
 
@@ -153,12 +163,15 @@ print(f'Global constrained force vector = \n{Fc_global}\n')
 
 print(f'Global support reactions = \n{f_supp}\n')
 
-# %%% check global dofs 
-
-elem.GlobalDofs()
-
 # %%%
-
 u_elem = s1.FullDisplacement(u_free)
 print(f'u_elem = \n{u_elem}\n')
+
+# %%% get element displacements
+
+disp = s1.ElementDisplacements(u_elem, omega)
+
+# %%% Plot displacements
+
+s1.PlotElementDisplacements(disp,scale=100.0)
 

@@ -5,6 +5,9 @@ from collections import defaultdict
 from ...elements import ElementFactory
 from .dofs import DOFContainer, DOF
 
+
+
+
 # %% class definition
 class Element:
     """
@@ -142,16 +145,17 @@ class Element:
         return element_type_dofs
     
     
-    def get_local_element_dof_indices(self):
+    def get_full_element_dof_indices(self) -> list:
         """
         Returns the list of global DOF indices for the element based on the DOFs stored in element.dofs.
+        Based on the numbering provided by class variable 'dof_mapping'
     
         Returns
         -------
         nodal_dofs : list of int
             List of global DOF indices for the element's DOFs.
         """
-        local_dof_indices = []
+        element_dof_indices = []
         Ndof = Element.maxNdof  
         
         for i, node in enumerate(self.nodes):
@@ -159,9 +163,40 @@ class Element:
             for dof_name, dof in element_dof_container.dofs.items():
                 # Calculate local index if global index is not assigned
                 local_dof_index = self.dof_mapping[dof_name] + i * Ndof
-                local_dof_indices.append(local_dof_index)
+                element_dof_indices.append(local_dof_index)
         
-        return local_dof_indices
+        return element_dof_indices
+    
+    def get_specific_dof_indices(self, dofs) -> list:
+        """
+        Returns the list of indices for the specified DOFs that are actually present within the element.
+    
+        This method returns the indices for the specified DOFs that are defined for each node within
+        the element. For example, if one node has DOFs 'x' and 'z', and another has only 'x', and you
+        are querying for 'x', the returned indices will be those corresponding to 'x' for both nodes.
+    
+        Parameters
+        ----------
+        dofs : list of str
+            List of DOFs to find indices for (e.g., ['x', 'z']).
+    
+        Returns
+        -------
+        specific_dof_indices : list of int
+            List of indices representing the specified DOFs that are currently defined in the element.
+        """
+        specific_dof_indices = []
+        index_counter = 0
+    
+        for node in self.nodes:
+            element_dof_container = self.dof_containers[node.id]  # Use local DOF container
+            for dof_name in element_dof_container.dofs.keys():
+                # Check if the current DOF is in the list of required DOFs
+                if dof_name in dofs:
+                    specific_dof_indices.append(index_counter)
+                index_counter += 1
+    
+        return specific_dof_indices
 
 # %% stiffness
 
@@ -170,7 +205,7 @@ class Element:
         function to determine the global stiffness matrix of the element, as created from its local elements
         '''
         # get the local dof indices 
-        local_dof_indices = self.get_local_element_dof_indices()
+        local_dof_indices = self.get_full_element_dof_indices()
         # number of dofs in the current Element
         Ndof = len(local_dof_indices)
         
@@ -209,7 +244,7 @@ class Element:
 
 # %% loads
 
-    def AddDistributedLoad(self,**loads):
+    def AddDistributedLoad(self,**loads) -> None:
         '''
         Adds distributed loads to the element.
     
@@ -231,7 +266,7 @@ class Element:
         Evaluates the distributed load
         '''
         # get the local dof indices 
-        local_dof_indices = self.get_local_element_dof_indices()
+        local_dof_indices = self.get_full_element_dof_indices()
         
         # number of dofs in the current Element
         Ndof = len(local_dof_indices)
@@ -253,7 +288,8 @@ class Element:
             # pass through the loads that are specific for that element
             q_loc += self.FullDistributedLoad(element_type, q_evaluated, omega)[np.ix_(local_dof_indices)]
         
-        q_glob = self.R[np.ix_(local_dof_indices,local_dof_indices)].T @ q_loc
+        # TODO - check whether 
+        q_glob = self.R[np.ix_(local_dof_indices,local_dof_indices)] @ q_loc
         
         return q_glob   
 
@@ -544,6 +580,63 @@ class Element:
                 if dof_container.has_dof(dof_name):
                     dof_container.set_dof(dof_name, value=value)
                     
+# %% Element Displacements
+
+    def Displacements(self, u_nodes_global, omega, num_points=20):
+        """
+        Gets the displacements over the local axis of the element evaluated at num_points.
+    
+        Result is structured as (example in 2D config):
+            u_elem = [u_x(s)
+                      u_z(s)
+                      phi_y(s)]
+    
+        Where:
+            - u_x(s) = axial displacement 
+            - u_z(s) = transverse displacement
+            - phi_y(s) = rotation about y axis
+    
+        Input:
+            u_nodes_global: [u_x_left
+                             u_z_left
+                             phi_y_left
+                             u_x_right
+                             u_z_right
+                             phi_y_right]
+        """
+        
+        # Get all element dof indices present based on dof mapping
+        local_dof_indices = self.get_full_element_dof_indices()
+        Ndof = len(local_dof_indices)
+    
+        # Convert the global nodal displacements to the local element coordinate system
+        u_local = self.R[np.ix_(local_dof_indices, local_dof_indices)] @ u_nodes_global
+    
+        # Initialize empty list to hold displacements for each DOF at specified points
+        u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Ndof)])
+        # u_elem = [None] * Ndof 
+    
+        # Loop over all element types
+        for element_type_name, element_type in self.element_types.items():
+            # Get the DOFs of the element type in the context of the nodes
+            dofs = element_type.dofs
+            specific_dof_indices = self.get_specific_dof_indices(dofs)
+    
+            # Calculate local displacements for the specific element type
+            u_elem_contribution = element_type.LocalElementDisplacements(
+                u_local[np.ix_(specific_dof_indices)], omega, num_points
+            )
+    
+            # Add the contribution of each element type to the full local element displacements
+            for i, dof in enumerate(dofs):
+                global_dof_index = self.dof_mapping[dof]
+                if u_elem_contribution[i] is not None:
+                    u_elem[global_dof_index] += u_elem_contribution[i]
+    
+        u_global = self.R[:6,:6].T @ u_elem
+    
+        return u_global
+
 
 # %% help functions    
     def create_local_dofs_vector(self, node):
@@ -695,7 +788,7 @@ class Element:
         # Update the global DOF in the node's DOFContainer
         dof_container = self.dof_containers[node.id]
         if dof_container.has_dof(global_dof_name):
-            dof_container.set_dof(global_dof_name, value=global_dof_value)
+            dof_container.set_dof_value(global_dof_name, global_dof_value)
             print(f"Global DOF '{global_dof_name}' for node {node.id} updated to {global_dof_value}.")
         
         # Map the changed global DOF to the local DOFs
@@ -706,7 +799,7 @@ class Element:
         # Apply the change to the local DOFs
         for local_dof_name in local_dof_map.get(global_dof_name, []):
             if local_dof_container.has_dof(local_dof_name):
-                local_dof_container.set_dof(local_dof_name, value=global_dof_value)
+                local_dof_container.set_dof_value(local_dof_name, global_dof_value)
                 print(f"Local DOF '{local_dof_name}' updated to {global_dof_value}.")
     
     def check_and_handle_global_dofs(self,dofs):

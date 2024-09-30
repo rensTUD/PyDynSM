@@ -31,7 +31,7 @@ EI = 1.5 * 7e06
 I = EI/E
 rhoA = 1e03 
 rho = rhoA/A
-q_r = 0*1e02 + 0j 
+q_r = 1*1e02 + 0j 
 q_b = 1*1e06 + 0j 
 L  = 1
 omega = 100  
@@ -76,7 +76,7 @@ s1.run_connectivity()
 
 # %%% Add distributed load per DOF in global coord system
 
-q_r = lambda omega: 0 if omega == omega_f else 0
+q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
 elem.AddDistributedLoad(x=q_r, z=q_b)
 
@@ -116,12 +116,17 @@ print(f'Global constrained force vector = \n{Fc_global}\n')
 
 print(f'Global support reactions = \n{f_supp}\n')
 
-# %%% check global dofs 
-
-elem.GlobalDofs()
 
 # %%%
 
 u_elem = s1.FullDisplacement(u_free)
 print(f'u_elem = \n{u_elem}\n')
+
+# %%% get element displacements
+
+disp = s1.ElementDisplacements(u_elem, omega)
+
+# %%% Plot displacements
+
+s1.PlotElementDisplacements(disp,scale=2.0)
 
