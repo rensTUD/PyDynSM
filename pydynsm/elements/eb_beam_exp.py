@@ -207,7 +207,7 @@ class EulerBernoulliBeam(StructuralElement):
 
         # TODO - check for correctness
         u_load = np.array([q_z/omega**2/rho/A, 0, q_z/omega**2/rho/A, 0])
-        C = np.linalg.inv(A_mat) @ (u_nodes_local + u_load)
+        C = np.linalg.inv(A_mat) @ (u_nodes_local - u_load)
         # + np.array([1/(E*Ib*beta_b**4),0,1/(E*Ib*beta_b**4),0]) * q)
 
         return C
@@ -226,17 +226,29 @@ class EulerBernoulliBeam(StructuralElement):
         Note:
             if C is not given, then calculate it based on u_node_local.
         """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
-
+        
+        # get distributed load value
+        # extract loads
+        q_z = self.q[0]
+        q_phi = self.q[1] 
+        # should be like:
+        # q_b, q_m = self.
+        
         # Check if C is input, otherwise, calculate it
         if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
+        u_load = np.array([q_z/omega**2/rho/A])
         w = (C[0]*np.exp(-1j*alpha_1*x) +
              C[1]*np.exp(-1j*alpha_2*x) +
              C[2]*np.exp(-1j*alpha_3*x) +
-             C[3]*np.exp(-1j*alpha_4*x))
+             C[3]*np.exp(-1j*alpha_4*x)) + u_load
 
         return w
 
@@ -254,16 +266,28 @@ class EulerBernoulliBeam(StructuralElement):
         Note:
             if C is not given, then calculate it based on u_node_local.
         """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
         alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        # get distributed load value
+        # extract loads
+        q_z = self.q[0]
+        q_phi = self.q[1] 
+        # should be like:
+        # q_b, q_m = self.
 
         # check if C is input
         if C is None:
             C = self.Coefficients(u_node_local, omega)
 
         # Rotations
+        u_load = 0
         phi = (-1j*C[0]*alpha_1*np.exp(-1j*alpha_1*x) -
                1j*C[1]*alpha_2*np.exp(-1j*alpha_2*x) -
                1j*C[2]*alpha_3*np.exp(-1j*alpha_3*x) -
-               1j*C[3]*alpha_4*np.exp(-1j*alpha_4*x))
+               1j*C[3]*alpha_4*np.exp(-1j*alpha_4*x)) + u_load
 
         return -phi

@@ -62,7 +62,7 @@ p_x = lambda omega: 10 if omega == omega_f else 0
 
 # add a load directly to node2
 
-node1.add_load(x=p_x)
+node2.add_load(x=p_x)
 
 # %%%% Plot nodes
 

@@ -174,7 +174,7 @@ class Rod1D(StructuralElement):
 
         # TODO - check
         u_load = np.array([-q/(rho*A*omega**2), -q/(rho*A*omega**2)])
-        C = np.linalg.inv(A_mat) @ (u_nodes_local + u_load)
+        C = np.linalg.inv(A_mat) @ (u_nodes_local - u_load)
 
         # return the coefficients, in this case 2
         return C
@@ -193,13 +193,23 @@ class Rod1D(StructuralElement):
         Note:
             if C is not given, then calculate it based on u_node_local.
         """
+        
+        # read all the variables
+        rho = self.rho
+        A = self.A
+        
+        # get the wavenumbers
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
         # check if C is input
         if C is None:
             C = self.Coefficients(u_node_local, omega)
-
+            
+        # get distributed load value
+        q = self.q[0]
+            
         # displacements
-        u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x)
+        u_load = np.array([-q/(rho*A*omega**2)])
+        u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x) + u_load
 
         return u

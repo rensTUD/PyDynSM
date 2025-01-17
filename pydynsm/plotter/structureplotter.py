@@ -57,7 +57,7 @@ class StructurePlotter:
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
             plt.scatter(node.x, node.z, color='red', marker='o', label='Node' if 'Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-            plt.text(node.x, node.z, f'{node.id}', fontsize=9, ha='right')
+            plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
         for element in elements:
             x_values = [element.nodes[0].x, element.nodes[1].x]
             z_values = [element.nodes[0].z, element.nodes[1].z]

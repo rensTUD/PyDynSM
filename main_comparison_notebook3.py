@@ -128,5 +128,5 @@ disp = s1.ElementDisplacements(u_elem, omega)
 
 # %%% Plot displacements
 
-s1.PlotElementDisplacements(disp,scale=2.0)
+s1.PlotElementDisplacements(disp,scale=100.0)
 
