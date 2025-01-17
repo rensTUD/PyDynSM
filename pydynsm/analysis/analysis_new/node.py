@@ -95,7 +95,7 @@ class Node:
         self.nodal_loads = defaultdict(dict)
         self.connected_elements = []
         
-    def GlobalDofs(self):
+    def get_dof_indices(self):
         """Returns a list of global DOF indices for the node."""
         return [dof.index for dof in self.dof_container.dofs.values() if dof.index is not None]
 
@@ -131,9 +131,12 @@ class Node:
         if dof is None:
             raise ValueError(f"DOF '{dof_name}' is not part of the node's current configuration.")
         
-        # Propagate the change to all connected elements
-        for element in self.connected_elements:
-            element.apply_global_dof_change(self, dof_name, value)
+        # Propagate the change to all connected elements if present
+        if not self.connected_elements:
+            return
+        else:
+            for element in self.connected_elements:
+                element.apply_global_dof_change(self, dof_name, value)
     
         print(f"Global DOF '{dof_name}' with value '{value}' applied to connected elements.")               
 

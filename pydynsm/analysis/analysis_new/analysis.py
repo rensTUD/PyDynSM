@@ -41,7 +41,7 @@ class Analysis:
         # set up block matrix per element
         for e in elements:
             elmat = e.Stiffness(omega)
-            idofs = e.GlobalDofs()
+            idofs = e.get_element_node_dof_indices_global()
             k_global[np.ix_(idofs, idofs)] = elmat
             
         # sort by unique / redundant dofs to comply with the structure of L
@@ -87,7 +87,7 @@ class Analysis:
                 continue
             
             # get dofs of the element
-            dofs = element.GlobalDofs()
+            dofs = element.get_element_node_dof_indices_global()
             
             # for element_load in element.element_loads:
             f_global[np.ix_(dofs)] += element.EvaluateDistributedLoad(element.element_loads, omega)
@@ -259,14 +259,28 @@ class Analysis:
         element_displacements : dict
             Dictionary with element IDs as keys and their global displacements (as numpy arrays) as values.
         """
+        
+        # Apply L matrix to get displacements of redundant nodes as well
+        u_nodes_global_all = self.L @ u_nodes_global
+        
+        # Get the current order
+        current_order = self.unique_dofs + self.redundant_dofs
+        
+        # Create an index map to reorder the elements to match sorted_order
+        sorted_order = sorted(current_order)
+        index_map = [current_order.index(idx) for idx in sorted_order]
+        
+        # Reorder u_nodes_global_all using the index map
+        u_nodes_global_all_sorted = np.array(u_nodes_global_all)[index_map]
+        
         element_displacements = {}
     
         for element in elements:
-            # Retrieve global DOF indices for the current element
-            global_dof_indices = element.GlobalDofs()
+            # Retrieve global nodal DOF indices for the current element
+            global_dof_indices = element.get_node_dof_indices_global()
     
             # Extract the relevant global displacements for this element
-            u_element_global = u_nodes_global[global_dof_indices]
+            u_element_global = u_nodes_global_all_sorted[global_dof_indices]
     
             # Calculate the displacements for the element using its Displacements method
             u_elem = element.Displacements(u_element_global, omega, num_points)
@@ -422,7 +436,9 @@ class Analysis:
                     # TODO - SEE HOW TO HANDLE DOF INDICES FOR ELEMENT DOFS AND NODE DOFS IN A NEAT WAY. NOW WE HAVE THREE DIFFERENT DICTIONARIES STORING THEM. NOT THAT EFFICIENT ATM
                     # same for the node, but only if present in node
                     if node_dof_container.has_dof(dof_name):
-                        node_dof_container.dofs[dof_name].index = global_index
+                        # add index only if it hasn't been assigned yet
+                        if not node_dof_container.dofs[dof_name].index:
+                            node_dof_container.dofs[dof_name].index = global_index
                         
                     global_index += 1  # Increment global index for each DOF
         

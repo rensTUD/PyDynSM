@@ -45,14 +45,14 @@ omega_f = omega
 
 node1 = s1.CreateNode(0,0)
 node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
-node3 = s1.CreateNode(2*L,L)
-node4 = s1.CreateNode(L,2*L)
+node3 = s1.CreateNode(0,L)
+# node4 = s1.CreateNode(L,2*L)
 
 # %%% Now set the constraints directly onto the nodes
 node1.fix_node('x', 'z')
-node2.fix_node('x')
+# node2.fix_node('x')
 node3.fix_node('x','z', 'phi_y')
-node4.fix_node('x','z')
+# node4.fix_node('x','z')
 # %%%% test adding a load to the node
 
 # define a lambda function running over omega for p_x
@@ -66,14 +66,14 @@ node1.add_load(x=p_x)
 
 # %%%% Plot nodes
 
-# s1.PlotStructure()
+s1.PlotStructure()
 
 # %%% Create element
 
 # initialise element by setting its nodes and calling it from the assembler
 elem = s1.CreateElement([node1, node2])
 elem2 = s1.CreateElement([node2, node3])
-elem3 = s1.CreateElement([node2, node4])
+# elem3 = s1.CreateElement([node2, node4])
 # %%% try to set a section that is not implemented yet
 elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
  
@@ -84,25 +84,25 @@ elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-elem3.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+# elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+# elem3.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 # %%% test adding dof to an element that is not supported by the local dofs of that element
 
-elem.fix_dof(node2, 'z')
+# elem.fix_dof(node2, 'z')
 
 
 # %%%%
-elem.free_dof(node2, 'z')
+# elem.free_dof(node2, 'z')
 
 # %%%% 
 
-elem3.free_dof(node2,'x')
-elem3.fix_dof(node2,'z')
+# elem3.free_dof(node2,'x')
+# elem3.fix_dof(node2,'z')
 
 # %% test change nodal dof
 
-node2.dof_container
-node2.free_node('x')
+# node2.dof_container
+# node2.free_node('x')
 
 # %% Testing for connectivity, B, and L matrices
 
