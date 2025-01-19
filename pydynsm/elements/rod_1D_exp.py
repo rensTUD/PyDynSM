@@ -119,7 +119,7 @@ class Rod1D(StructuralElement):
         # determine wavenumber
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
-        # TODO - check
+        # TODO - check (this is correct from maple, need to be checked later via numerical examples)
         el = np.array([-1j*E*(np.exp(-1j*alpha_2*L)*alpha_1 - np.exp(-1j*alpha_1*L)*alpha_2)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + -1j*E*(alpha_1 - alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2,
                        -1j*E*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2))/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + 1j*E*(np.exp(-1j*alpha_2*L)*alpha_2 - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2])
 
