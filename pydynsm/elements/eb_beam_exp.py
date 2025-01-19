@@ -34,11 +34,12 @@ class EulerBernoulliBeam(StructuralElement):
         # Initialise local beam element with necessary parameters
         self.rho = rho
         self.A = A
-        self.E = E
+        # self.E = E # please see the line below for complex E value
         self.Ib = Ib
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
+        self.E = E*(1+2*self.ksi)
         
         # set q standard to 0
         self.q = np.zeros(len(dofs))
