@@ -42,26 +42,23 @@ omega_f = omega
 
 # %%% Create nodes from the assembler
 
-
 node1 = s1.CreateNode(0,0)
-node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
+# node2 will have no 'z' displacement - will be handled without setting stiffness to infinity (results are still to be verified)
+node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']]) 
 node3 = s1.CreateNode(0,L)
-# node4 = s1.CreateNode(L,2*L)
 
 # %%% Now set the constraints directly onto the nodes
+
 node1.fix_node('x', 'z')
-# node2.fix_node('x')
 node3.fix_node('x','z', 'phi_y')
-# node4.fix_node('x','z')
+
 # %%%% test adding a load to the node
 
-# define a lambda function running over omega for p_x
-# TODO - see how to add a time domain load instead of freq domain load
+# define a lambda function running over omega for p_x - if constant is given that value will be evaluated for all frequencies
 omega_f = 100
 p_x = lambda omega: 10 if omega == omega_f else 0
 
 # add a load directly to node2
-
 node2.add_load(x=p_x)
 
 # %%%% Plot nodes
@@ -72,61 +69,28 @@ s1.PlotStructure()
 
 # initialise element by setting its nodes and calling it from the assembler
 elem = s1.CreateElement([node1, node2])
-elem2 = s1.CreateElement([node2, node3])
-# elem3 = s1.CreateElement([node2, node4])
-# %%% try to set a section that is not implemented yet
-elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
+elem1 = s1.CreateElement([node2, node3])
+
+# plot elements too
+s1.PlotStructure(plot_elements=True)
  
-# %%% now set the sections (or element types for that matter)
+# %%% now set the sections onto the elements
+
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-# elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-# elem3.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
-# %%% test adding dof to an element that is not supported by the local dofs of that element
-
-# elem.fix_dof(node2, 'z')
-
-
-# %%%%
-# elem.free_dof(node2, 'z')
-
-# %%%% 
-
-# elem3.free_dof(node2,'x')
-# elem3.fix_dof(node2,'z')
-
-# %% test change nodal dof
-
-# node2.dof_container
-# node2.free_node('x')
-
-# %% Testing for connectivity, B, and L matrices
-
-# %%% get global dofs of the elements
-dof_indices, num_dof = s1.get_dofs_elements()
-
-# %%% run the connectivity
-dof_indices, B = s1.get_B_matrix()
-
-# %%%%
+# %%% Run connectivity
 
 s1.run_connectivity()
-
-# %%%% plot elements too
-
-# s1.PlotStructure(plot_elements=True)
-
 
 # %%% Add distributed load per DOF in global coord system
 
 q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
 elem.AddDistributedLoad(x=q_r, z=q_b)
-
 
 
 # %%% Get the global stiffness and force matrices
@@ -139,15 +103,14 @@ F_global = s1.GlobalForce(omega)
 Kc_global = s1.GlobalConstrainedStiffness(omega)
 Fc_global = s1.GlobalConstrainedForce(omega)
 
-# %%% solve as well for u_free
+# %%% Solve for the free DOFs
+
 u_free = s1.SolveUfree(Kc_global, Fc_global)
 
-# %%% and for the support reactions
+# %%% Solve for the support reactions
 
 f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
 
-# %%%%
-# TODO: IMPORTANT: RESULTS ARE SLIGHTLY OFF FROM THE NOTEBOOK 3.3 (SHOULD INVESTIGATE)
 
 # %%%%
 print(f'Solution of u_free = \n{u_free}\n')
@@ -168,7 +131,6 @@ u_elem = s1.FullDisplacement(u_free)
 print(f'u_elem = \n{u_elem}\n')
 
 # %%% get element displacements
-
 disp = s1.ElementDisplacements(u_elem, omega)
 
 # %%% Plot displacements
