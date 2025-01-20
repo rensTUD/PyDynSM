@@ -21,7 +21,7 @@ class StructurePlotter:
             # color = 'blue' if len(node.constrained_dofs) == 0 else 'red'
             # plt.scatter(node.x, node.z, color=color, marker=marker, label=f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' if f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' not in plt.gca().get_legend_handles_labels()[1] else "")
             plt.scatter(node.x, node.z, color='red', marker='o', label=f'Node: {node.id}')
-            plt.text(node.x, node.z, f'{node.id}', fontsize=9, ha='right')
+            plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
 
     def PlotElements(self, elements):
         for element in elements:
@@ -30,7 +30,7 @@ class StructurePlotter:
             plt.plot(x_values, z_values, 'k-', linewidth=2, label=f'Element: {element.id}' if 'Element' not in plt.gca().get_legend_handles_labels()[1] else "")
             mid_x = sum(x_values) / 2
             mid_z = sum(z_values) / 2
-            plt.text(mid_x, mid_z, element.id, fontsize=9, color='black')
+            plt.text(mid_x, mid_z+0.02, element.id, fontsize=9, color='black')
             
     def PlotDisplacements(self, elements, displacements, scale=1.0):
         """
@@ -113,11 +113,11 @@ class StructurePlotter:
         # Plot the displaced nodes (real and imaginary parts)
         for node_id, (x_disp_real, z_disp_real) in displaced_nodes_real.items():
             plt.scatter(x_disp_real, z_disp_real, color='blue', marker='x', label='Real Part of Displaced Node' if 'Real Part of Displaced Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-            plt.text(x_disp_real, z_disp_real, f'{node_id}', fontsize=9, ha='right', color='blue')
+            plt.text(x_disp_real+0.02, z_disp_real+0.02, f'{node_id}', fontsize=9, ha='right', color='blue')
 
         for node_id, (x_disp_imag, z_disp_imag) in displaced_nodes_imag.items():
             plt.scatter(x_disp_imag, z_disp_imag, color='green', marker='x', label='Imaginary Part of Displaced Node' if 'Imaginary Part of Displaced Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-            plt.text(x_disp_imag, z_disp_imag, f'{node_id}', fontsize=9, ha='right', color='green')
+            plt.text(x_disp_imag+0.02, z_disp_imag+0.02, f'{node_id}', fontsize=9, ha='right', color='green')
 
         # Add legend and show the plot
         plt.legend()
