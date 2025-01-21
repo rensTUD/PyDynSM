@@ -321,7 +321,7 @@ class Element:
         '''
         Evaluates the distributed load
         '''
-        # get the local dof indices 
+        # get the local dof indices - i.e. the indices of dofs present in the element per node
         local_dof_indices = self.get_full_element_dof_indices_global()
         
         # number of dofs in the current Element
