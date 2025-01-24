@@ -65,6 +65,7 @@ class Element:
             node.connect_element(self)  # Connect this element to its nodes
                 
         # Initialize DOFContainers for global DOFs, copying DOFs from nodes
+        # self.dof_containers = {node.id: DOFContainer() for node in nodes}
         self.dof_containers = {}
         for node in nodes:
             # Load nodal DOFContainer
@@ -82,7 +83,6 @@ class Element:
         
         # set local dofs containers as empty first
         self.local_dof_container = {node.id: DOFContainer() for node in nodes}
-        
         
         # calculate geometrical properties
         self.geometrical_properties()
@@ -162,17 +162,17 @@ class Element:
         nodal_dofs : list of int
             List of global DOF indices for the element's DOFs.
         """
-        element_dof_indices = []
+        element_dof_indices_global = []
         Ndof = Element.maxNdof  
         
         for i, node in enumerate(self.nodes):
-            element_dof_container = self.dof_containers[node.id]
-            for dof_name, dof in element_dof_container.dofs.items():
+            element_dof_container_g = self.dof_containers[node.id]
+            for dof_name, dof in element_dof_container_g.dofs.items():
                 # Calculate local index if global index is not assigned
-                local_dof_index = self.dof_mapping[dof_name] + i * Ndof
-                element_dof_indices.append(local_dof_index)
+                global_dof_index = self.dof_mapping[dof_name] + i * Ndof
+                element_dof_indices_global.append(global_dof_index)
         
-        return element_dof_indices
+        return element_dof_indices_global
     
     def get_full_element_dof_indices_local(self) -> list:
         """
@@ -184,17 +184,18 @@ class Element:
         nodal_dofs : list of int
             List of local DOF indices for the element's DOFs.
         """
-        element_dof_indices = []
+        element_dof_indices_local = []
         Ndof = Element.maxNdof  
         
         for i, node in enumerate(self.nodes):
-            element_dof_container = self.local_dof_container[node.id]
-            for dof_name, dof in element_dof_container.dofs.items():
+            element_dof_container_l = self.local_dof_container[node.id]
+            for dof_name, dof in element_dof_container_l.dofs.items():
                 # Calculate local index if global index is not assigned
-                local_dof_index = self.dof_mapping[dof_name] + i * Ndof
-                element_dof_indices.append(local_dof_index)
+                # local_dof_index = self.dof_mapping[dof_name] + i * Ndof
+                local_dof_index = self.dof_mapping[dof_name]+ i * Ndof
+                element_dof_indices_local.append(local_dof_index)
         
-        return element_dof_indices
+        return element_dof_indices_local
     
     def get_specific_dof_indices_global(self, dofs) -> list:
         """
@@ -720,14 +721,14 @@ class Element:
                 u_local[np.ix_(specific_dof_indices)], omega, num_points
             )
     
-            # Add the contribution of each element type to the full local element displacements
+            # Add the contribution of each element type to the full local elment displacements
             for i, dof in enumerate(dofs):
                 global_dof_index = self.dof_mapping[dof]
-                if u_elem_contribution[i] is not None:
-                    u_elem[global_dof_index] += u_elem_contribution[i]
-    
-        u_global = self.R[:6,:6].T @ u_elem
-    
+                if u_elem_contribution[i] is not None: 
+                    u_elem[global_dof_index] += u_elem_contribution[i] #here this global_dof_index from mapping should be different for Rod and EB, otherwise not valid for single elements?
+                        
+        # u_global = self.R[:6,:6].T @ u_elem
+        u_global = self.R[:len(local_dof_indices),:len(global_dof_indices)].T @ u_elem # also change index here to make it general for different scenarios
         return u_global
 
 
