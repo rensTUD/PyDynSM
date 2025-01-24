@@ -670,7 +670,7 @@ class Element:
         u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
     
         # Initialize empty list to hold displacements for each DOF at specified points
-        u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Ndof)])
+        u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
         # u_elem = [None] * Ndof 
     
         # Loop over all element types
