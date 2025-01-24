@@ -100,8 +100,11 @@ Kc_global = s1.GlobalConstrainedStiffness(Omega)
 Fc_global = s1.GlobalConstrainedForce(Omega)
 
 # %%% solve for free end disp
-u_free = s1.SolveUfree(Kc_global, Fc_global)
-print(u_free.real)
+u_free = s1.SolveUfree(Kc_global,Fc_global)
+H_1 = s1.SupportReactions(K_global,u_free,F_global)[0]
+
+print(f'The free end displacement is {u_free.real}')
+print(f'The fixed end reaction is {H_1.real}')
 
 #%% end of test 1
 #%% test 2: free end disp FRF
@@ -127,6 +130,7 @@ s2.run_connectivity()
 # %%% add transverse distributed load with all frequencies, need to be checked later, seems unphysical...
 elem2.AddDistributedLoad(x=F_0)
 # %%% main loop for generating FRF
+# u_free_frequency_positive = []
 for omega_test in omega_values_check_test:
 
     K_global_test = s2.GlobalStiffness(omega_test)
@@ -137,6 +141,8 @@ for omega_test in omega_values_check_test:
 
     u_free = s2.SolveUfree(Kc_global_test, Fc_global_test) # Free end solution
     H_fix =  s2.SupportReactions(K_global_test,u_free,F_global_test) # Reaction forces at the fixed end
+    u_full = s2.FullDisplacement(u_free)
+    # displacement = elem2.Displacement(u_full,100,20)
 
     FRF_U2.append(u_free)
     FRF_H.append(H_fix[0])
@@ -203,3 +209,47 @@ plt.grid(True)
 plt.show()
 
 #%% end of test 2
+
+
+#%% test 3: displacement field
+# %%% create FRF inputs
+omega_pos_max = 1601
+N_pos = 1601
+omega_pos = np.linspace(1, omega_max, N_pos)
+N_total = 2 * N_pos
+
+omega_neg = np.linspace(-omega_pos_max,-1,N_pos)
+omega_values = np.concatenate([omega_pos,omega_neg])
+
+# %%% assembler
+s3 = Assembler('1D Rod - Time domain', analysis_type='new')
+# %%% create nodes and elements
+node5 = s3.CreateNode(0,0)
+node6 = s3.CreateNode(L,0)
+elem3 = s3.CreateElement([node5, node6])
+# %%% add constraints
+node5.fix_node('x','z', 'phi_y')
+node6.fix_node('z', 'phi_y')
+elem3.SetSection('Rod', {'E': E, 'A': A, 'rho': rho, 'ksi': ksi})
+
+
+# %%% add transverse simple harmonic distributed load for omega = 100
+omega_F = 100
+F_omega = lambda omega: F_0 if omega == omega_F else 0
+elem3.AddDistributedLoad(x=F_omega)
+s3.run_connectivity()
+
+# %%% main loop for generating FRF
+FRF_positive = []
+for omega_test in omega_pos:
+
+    K_global_test3 = s3.GlobalStiffness(omega_test)
+    F_global_test3 = s3.GlobalForce(omega_test)
+
+    Kc_global_test3 = s3.GlobalConstrainedStiffness(omega_test)
+    Fc_global_test3 = s3.GlobalConstrainedForce(omega_test)
+
+    u3_free = s3.SolveUfree(Kc_global_test3, Fc_global_test3) # Free end solution
+    u_full =  s3.FullDisplacement(u3_free)
+    R = elem3.R
+    disp = elem3.Displacements(u_full, omega_F)
