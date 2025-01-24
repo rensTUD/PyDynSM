@@ -156,6 +156,7 @@ for Omega in omega:
 # print(f'u_elem = \n{u_elem}\n')
 
 # %%% get element displacements
+
 disp = s1.ElementDisplacements(u_elem, omega)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
