@@ -67,13 +67,17 @@ class Element:
         # Initialize DOFContainers for global DOFs, copying DOFs from nodes
         self.dof_containers = {}
         for node in nodes:
+            # Load nodal DOFContainer
             node_dof_container = node.dof_container
+            # intialise element DOFContainer
             element_dof_container = DOFContainer()
+            
             # Copy DOFs from node's DOFContainer to element's DOFContainer
             for dof_name, node_dof in node_dof_container.dofs.items():
                 # Create a new DOF instance with the same name and value
                 element_dof = DOF(name=dof_name, value=node_dof.value, index=node_dof.index)
                 element_dof_container.dofs[dof_name] = element_dof
+                
             self.dof_containers[node.id] = element_dof_container
         
         # set local dofs containers as empty first
