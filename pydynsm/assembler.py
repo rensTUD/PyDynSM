@@ -214,6 +214,12 @@ class Assembler:
         '''
         
         return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points)
+    def ElementForces(self, u_full, omega, num_points=20):
+        '''
+        Returns all element forces
+        '''
+        
+        return self.Analysis.ElementForces(self.elements, u_full, omega, num_points)
     
 # %% POSTPROCESS
 
@@ -222,6 +228,13 @@ class Assembler:
         Plots the displacements
         '''
         self.StructurePlotter.PlotDisplacements(self.elements, Element_displacements, scale=scale)
+        
+    
+    def PlotMoments(self,Element_forces: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the displacements
+         '''
+         self.StructurePlotter.Plotmoments(self.elements, Element_forces, scale=scale)
 
 # %% Testing area
     def get_dofs_elements(self):
