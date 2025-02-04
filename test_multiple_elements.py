@@ -35,7 +35,8 @@ q_r = 0*1e02 + 0j
 q_b = 1*1e06 + 0j 
 L  = 1
 omega = 100  
-ksi = 0.01 
+ksi = 0.01
+ksi = 0
 omega_f = omega
 
 
@@ -90,7 +91,7 @@ s1.run_connectivity()
 
 q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
-elem.AddDistributedLoad(x=q_r, z=q_b)
+elem1.AddDistributedLoad(x=q_r, z=q_b)
 
 
 # %%% Get the global stiffness and force matrices
@@ -133,8 +134,10 @@ print(f'u_elem = \n{u_elem}\n')
 # %%% get element displacements
 
 disp = s1.ElementDisplacements(u_elem, omega)
+force = s1.ElementForces(u_elem, omega,num_points=201)
 
 # %%% Plot displacements
 
-s1.PlotElementDisplacements(disp,scale=100.0)
+s1.PlotElementDisplacements(disp,scale=100)
+s1.PlotMoments(force,scale = 1e-6)
 
