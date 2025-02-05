@@ -11,19 +11,18 @@ authors = [
 description = "A Dynamic Stiffness Matrix method solver."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }  # Correct way to specify a license file
-
-# Automatically detected dependencies (use pipreqs in root folder of release: 'pipreqs src/pydynsm --print')
-dependencies = [
-  "numpy>=1.21, ",
-  "matplotlib>=3.4, ",
-  "scipy>=1.7, "
-]
-
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+]
+license = { file = "LICENSE" }  # ✅ Correct way to specify a license file
+
+# Automatically detected dependencies (use pipreqs in root folder of release: 'pipreqs src/pydynsm --print')
+dependencies = [
+  "numpy>=1.21",
+  "matplotlib>=3.4",
+  "scipy>=1.7"
 ]
 
 #[project.urls]
@@ -33,6 +32,7 @@ classifiers = [
 [tool.setuptools]
 package-dir = {"" = "src"}  # Uses the "src" layout
 include-package-data = true  # ✅ Ensures MANIFEST.in is used
+license-files = [] # temporary fix for setuptools throwing error with license
 
 [tool.setuptools.packages.find]
 where = ["src"]  # Finds packages inside "src/"
