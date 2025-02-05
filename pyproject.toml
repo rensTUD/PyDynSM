@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyDynSM"  
+version = "0.1.0"  # Increment this for each new release
+authors = [
+  { name = "Technical University Delft", email="r.j.vanleijden-1@tudelft.nl" }
+]
+description = "A Dynamic Stiffness Matrix method solver."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }  # Correct way to specify a license file
+
+# Automatically detected dependencies (use pipreqs in root folder of release: 'pipreqs src/pydynsm --print')
+dependencies = [
+  "numpy>=1.21, ",
+  "matplotlib>=3.4, ",
+  "scipy>=1.7, "
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+#[project.urls]
+#Homepage = "https://github.com/yourusername/my_package"
+#Issues = "https://github.com/yourusername/my_package/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}  # Uses the "src" layout
+include-package-data = true  # ✅ Ensures MANIFEST.in is used
+
+[tool.setuptools.packages.find]
+where = ["src"]  # Finds packages inside "src/"

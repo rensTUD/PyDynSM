@@ -1,0 +1,11 @@
+# include
+include LICENSE
+include README.md
+include pyproject.toml
+include manifest.in
+
+# get source
+graft src
+
+# exclude 
+exclude .gitignore
