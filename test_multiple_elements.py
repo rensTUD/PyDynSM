@@ -27,8 +27,9 @@ s1 = Assembler('beam',analysis_type='new')
 E = 210e9
 EA = 7e6
 A = EA/E
-EI = 1.5 * 7e06 
+EI = 1.5 * 7e06
 I = EI/E
+W = I
 rhoA = 1e03 
 rho = rhoA/A
 q_r = 0*1e02 + 0j 
@@ -60,7 +61,7 @@ omega_f = 100
 p_x = lambda omega: 10 if omega == omega_f else 0
 
 # add a load directly to node2
-node2.add_load(x=p_x)
+# node2.add_load(x=p_x)
 
 # %%%% Plot nodes
 
@@ -78,10 +79,10 @@ s1.PlotStructure(plot_elements=True)
 # %%% now set the sections onto the elements
 
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
 
 elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
 
 # %%% Run connectivity
 
@@ -91,7 +92,7 @@ s1.run_connectivity()
 
 q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
-elem1.AddDistributedLoad(x=q_r, z=q_b)
+elem.AddDistributedLoad(x=q_r, z=q_b)
 
 
 # %%% Get the global stiffness and force matrices
@@ -135,9 +136,14 @@ print(f'u_elem = \n{u_elem}\n')
 
 disp = s1.ElementDisplacements(u_elem, omega)
 force = s1.ElementForces(u_elem, omega,num_points=201)
+stress = s1.ElementStresses(u_elem, omega,num_points=201)
 
 # %%% Plot displacements
 
 s1.PlotElementDisplacements(disp,scale=100)
 s1.PlotMoments(force,scale = 1e-6)
-
+s1.PlotBendingstresses(stress,scale = 1e-11)
+s1.PlotAxialforces(force,scale = 1e-7)
+s1.PlotAxialstresses(stress,scale = 1e-11)
+s1.PlotShearforces(force,scale = 1e-7)
+s1.PlotShearstresses(stress,scale = 1e-11)
