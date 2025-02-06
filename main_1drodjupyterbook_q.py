@@ -43,11 +43,14 @@ F_0 = 1e06 + 0j
 L  = 1
 Omega = 100  
 ksi = 0.01
+EI = 1.5 * 7e06
+I = EI/E
 
 # %%% Create nodes from the assembler
 
 node1 = s1.CreateNode(0,0)
-node2 = s1.CreateNode(L,0)
+node2 = s1.CreateNode(L/2,0)
+# node3 = s1.CreateNode(L,0)
 
 # %%% print the coords of 2 nodes here
 print(f'The coordinate of node 1 is {node1.get_coords()}')
@@ -55,12 +58,18 @@ print(f'The coordinate of node 2 is {node2.get_coords()}')
 
 # %%% create elements
 elem = s1.CreateElement([node1, node2])
+# elem1 = s1.CreateElement([node2,node3])
 
 # %%% plot structural elements
 s1.PlotStructure(plot_elements=True)
 node1.fix_node('x','z','phi_y')
 node2.fix_node('z','phi_y')
+# node3.fix_node('z','phi_y')
 elem.SetSection('Rod', {'E': E, 'rho':rho, 'A':A})
+# elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': I})
+# elem1.SetSection('Rod', {'E': E, 'rho':rho, 'A':A})
+# elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': I})
+
 # F_omega = lambda omega: F_0 if omega == Omega else 0
 q_r = lambda omega: F_0 if omega == Omega else 0
 # Generate the range of omega values
@@ -79,6 +88,7 @@ q_r = lambda omega: F_0 if omega == Omega else 0
 #%% test 1: free end disp @ omega = 100 rad/s need being revisited in maple
 #%%% add nodal load
 elem.AddDistributedLoad(x=q_r)
+# elem1.AddDistributedLoad(x=q_r)
 
 #%%% num_dof
 dof_indices, num_dof = s1.get_dofs_elements()
@@ -103,153 +113,161 @@ Fc_global = s1.GlobalConstrainedForce(Omega)
 u_free = s1.SolveUfree(Kc_global,Fc_global)
 H_1 = s1.SupportReactions(K_global,u_free,F_global)[0]
 
+
 print(f'The free end displacement is {u_free.real}')
 print(f'The fixed end reaction is {H_1.real}')
 
-#%% end of test 1
-#%% test 2: free end disp FRF
-# %%% create FRF inputs
-omega_max = 2000
-omega_values_check_test = np.linspace(1, omega_max, omega_max+1)
-
-# %%% initialize the FRF list
-FRF_U2 = []
-FRF_H = []
-
-# %%% assembler
-s2 = Assembler('1D Rod', analysis_type='new')
-# %%% create nodes and elements
-node3 = s2.CreateNode(0,0)
-node4 = s2.CreateNode(L,0)
-elem2 = s2.CreateElement([node3, node4])
-# %%% add constraints
-node3.fix_node('x','z', 'phi_y')
-node4.fix_node('z', 'phi_y')
-elem2.SetSection('Rod', {'E': E, 'A': A, 'rho': rho, 'ksi': ksi})
-s2.run_connectivity()
-# %%% add transverse distributed load with all frequencies, need to be checked later, seems unphysical...
-elem2.AddDistributedLoad(x=F_0)
-# %%% main loop for generating FRF
-# u_free_frequency_positive = []
-for omega_test in omega_values_check_test:
-
-    K_global_test = s2.GlobalStiffness(omega_test)
-    F_global_test = s2.GlobalForce(omega_test)
-
-    Kc_global_test = s2.GlobalConstrainedStiffness(omega_test)
-    Fc_global_test = s2.GlobalConstrainedForce(omega_test)
-
-    u_free = s2.SolveUfree(Kc_global_test, Fc_global_test) # Free end solution
-    H_fix =  s2.SupportReactions(K_global_test,u_free,F_global_test) # Reaction forces at the fixed end
-    u_full = s2.FullDisplacement(u_free)
-    # displacement = elem2.Displacement(u_full,100,20)
-
-    FRF_U2.append(u_free)
-    FRF_H.append(H_fix[0])
-
-#%%% Calculate natural frequencies
-
-n_index = np.arange(1, 5)
-natural_frequencies = []
-
-for n in n_index:
-    E_complex = E * (1 + 2 * 1j * ksi)
-    c_b = np.sqrt(E_complex / rho)
-    omega_n = (2 * n - 1) * np.pi / (2 * L) * c_b
-    natural_frequencies.append(omega_n)
-
-#%%% Calculate limiting case under static loading
-u_static = F_0 * L**2 / (2*E * A)
-
-#%%% Plot displacement FRF
-plt.figure(figsize=(8, 5))
-plt.plot(omega_values_check_test, [u.real for u in FRF_U2], 'k', label='$\mathrm{Re}(u)$')
-plt.plot(omega_values_check_test, [u.imag for u in FRF_U2], 'r--', label='$\mathrm{Im}(u)$')
-
-# Add natural frequency lines with only one legend entry
-for i, omega_n in enumerate(natural_frequencies):
-    if i == 0:
-        plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1, label='Natural Frequencies')
-    else:
-        plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1)
-
-#%%% Static displacement line
-plt.axhline(y=u_static.real, color='b', linestyle='--', linewidth=1, label='Static Displacement')
-plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
-plt.ylabel('Free End Displacement $\mathrm{Re}(u)$ and $\mathrm{Im}(u)$')
-plt.title('Free End Displacement vs Loading Frequency')
-plt.xlim(0, 2000)
-plt.legend()
-plt.grid(True)
-plt.show()
-#%%% Plot reaction FRF
-
-#%%%% Plot the reaction results
-plt.figure(figsize=(8, 4))
-plt.plot(omega_values_check_test, [H.real for H in FRF_H], 'k',label='$\mathrm{Re}(H)$')
-plt.plot(omega_values_check_test, [H.imag for H in FRF_H], 'r--',label='$\mathrm{Im}(H)$')
-plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
-plt.ylabel('Support Reaction $\mathrm{Re}(H)$ and $\mathrm{Im}(H)$')
-plt.title('Support Reaction vs Loading Frequency')
+u_elem =  s1.FullDisplacement(u_free)
+disp = s1.ElementDisplacements(u_elem, Omega)
+force = s1.ElementForces(u_elem, Omega)
+s1.PlotElementDisplacements(disp,scale=100)
+s1.PlotAxialforces(force,scale=1e-7)
 
 
-#%%%% Add natural frequency lines with only one legend entry
-for i, omega_n in enumerate(natural_frequencies):
-    if i == 0:
-        plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1, label='Natural Frequencies')
-    else:
-        plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1)
+# #%% end of test 1
+# #%% test 2: free end disp FRF
+# # %%% create FRF inputs
+# omega_max = 2000
+# omega_values_check_test = np.linspace(1, omega_max, omega_max+1)
 
-#%%%% Static reaction line
-plt.axhline(y=(-F_0*L).real, color='b', linestyle='--', linewidth=1, label='Static Reaction')
-plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
-plt.xlim(0, 2000)
-plt.legend()
-plt.grid(True)
-plt.show()
+# # %%% initialize the FRF list
+# FRF_U2 = []
+# FRF_H = []
 
-#%% end of test 2
+# # %%% assembler
+# s2 = Assembler('1D Rod', analysis_type='new')
+# # %%% create nodes and elements
+# node3 = s2.CreateNode(0,0)
+# node4 = s2.CreateNode(L,0)
+# elem2 = s2.CreateElement([node3, node4])
+# # %%% add constraints
+# node3.fix_node('x','z', 'phi_y')
+# node4.fix_node('z', 'phi_y')
+# elem2.SetSection('Rod', {'E': E, 'A': A, 'rho': rho, 'ksi': ksi})
+# s2.run_connectivity()
+# # %%% add transverse distributed load with all frequencies, need to be checked later, seems unphysical...
+# elem2.AddDistributedLoad(x=F_0)
+# # %%% main loop for generating FRF
+# # u_free_frequency_positive = []
+# for omega_test in omega_values_check_test:
+
+#     K_global_test = s2.GlobalStiffness(omega_test)
+#     F_global_test = s2.GlobalForce(omega_test)
+
+#     Kc_global_test = s2.GlobalConstrainedStiffness(omega_test)
+#     Fc_global_test = s2.GlobalConstrainedForce(omega_test)
+
+#     u_free = s2.SolveUfree(Kc_global_test, Fc_global_test) # Free end solution
+#     H_fix =  s2.SupportReactions(K_global_test,u_free,F_global_test) # Reaction forces at the fixed end
+#     u_full = s2.FullDisplacement(u_free)
+#     # displacement = elem2.Displacement(u_full,100,20)
+
+#     FRF_U2.append(u_free)
+#     FRF_H.append(H_fix[0])
+
+# #%%% Calculate natural frequencies
+
+# n_index = np.arange(1, 5)
+# natural_frequencies = []
+
+# for n in n_index:
+#     E_complex = E * (1 + 2 * 1j * ksi)
+#     c_b = np.sqrt(E_complex / rho)
+#     omega_n = (2 * n - 1) * np.pi / (2 * L) * c_b
+#     natural_frequencies.append(omega_n)
+
+# #%%% Calculate limiting case under static loading
+# u_static = F_0 * L**2 / (2*E * A)
+
+# #%%% Plot displacement FRF
+# plt.figure(figsize=(8, 5))
+# plt.plot(omega_values_check_test, [u.real for u in FRF_U2], 'k', label='$\mathrm{Re}(u)$')
+# plt.plot(omega_values_check_test, [u.imag for u in FRF_U2], 'r--', label='$\mathrm{Im}(u)$')
+
+# # Add natural frequency lines with only one legend entry
+# for i, omega_n in enumerate(natural_frequencies):
+#     if i == 0:
+#         plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1, label='Natural Frequencies')
+#     else:
+#         plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1)
+
+# #%%% Static displacement line
+# plt.axhline(y=u_static.real, color='b', linestyle='--', linewidth=1, label='Static Displacement')
+# plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
+# plt.ylabel('Free End Displacement $\mathrm{Re}(u)$ and $\mathrm{Im}(u)$')
+# plt.title('Free End Displacement vs Loading Frequency')
+# plt.xlim(0, 2000)
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+# #%%% Plot reaction FRF
+
+# #%%%% Plot the reaction results
+# plt.figure(figsize=(8, 4))
+# plt.plot(omega_values_check_test, [H.real for H in FRF_H], 'k',label='$\mathrm{Re}(H)$')
+# plt.plot(omega_values_check_test, [H.imag for H in FRF_H], 'r--',label='$\mathrm{Im}(H)$')
+# plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
+# plt.ylabel('Support Reaction $\mathrm{Re}(H)$ and $\mathrm{Im}(H)$')
+# plt.title('Support Reaction vs Loading Frequency')
 
 
-#%% test 3: displacement field
-# %%% create FRF inputs
-omega_pos_max = 1601
-N_pos = 1601
-omega_pos = np.linspace(1, omega_max, N_pos)
-N_total = 2 * N_pos
+# #%%%% Add natural frequency lines with only one legend entry
+# for i, omega_n in enumerate(natural_frequencies):
+#     if i == 0:
+#         plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1, label='Natural Frequencies')
+#     else:
+#         plt.axvline(x=omega_n.real, color='g', linestyle='--', linewidth=1)
 
-omega_neg = np.linspace(-omega_pos_max,-1,N_pos)
-omega_values = np.concatenate([omega_pos,omega_neg])
+# #%%%% Static reaction line
+# plt.axhline(y=(-F_0*L).real, color='b', linestyle='--', linewidth=1, label='Static Reaction')
+# plt.xlabel('Frequency ($\omega_\mathrm{test}$)')
+# plt.xlim(0, 2000)
+# plt.legend()
+# plt.grid(True)
+# plt.show()
 
-# %%% assembler
-s3 = Assembler('1D Rod - Time domain', analysis_type='new')
-# %%% create nodes and elements
-node5 = s3.CreateNode(0,0)
-node6 = s3.CreateNode(L,0)
-elem3 = s3.CreateElement([node5, node6])
-# %%% add constraints
-node5.fix_node('x','z', 'phi_y')
-node6.fix_node('z', 'phi_y')
-elem3.SetSection('Rod', {'E': E, 'A': A, 'rho': rho, 'ksi': ksi})
+# #%% end of test 2
 
 
-# %%% add transverse simple harmonic distributed load for omega = 100
-omega_F = 100
-F_omega = lambda omega: F_0 if omega == omega_F else 0
-elem3.AddDistributedLoad(x=F_omega)
-s3.run_connectivity()
+# #%% test 3: displacement field
+# # %%% create FRF inputs
+# omega_pos_max = 1601
+# N_pos = 1601
+# omega_pos = np.linspace(1, omega_max, N_pos)
+# N_total = 2 * N_pos
 
-# %%% main loop for generating FRF
-FRF_positive = []
-for omega_test in omega_pos:
+# omega_neg = np.linspace(-omega_pos_max,-1,N_pos)
+# omega_values = np.concatenate([omega_pos,omega_neg])
 
-    K_global_test3 = s3.GlobalStiffness(omega_test)
-    F_global_test3 = s3.GlobalForce(omega_test)
+# # %%% assembler
+# s3 = Assembler('1D Rod - Time domain', analysis_type='new')
+# # %%% create nodes and elements
+# node5 = s3.CreateNode(0,0)
+# node6 = s3.CreateNode(L,0)
+# elem3 = s3.CreateElement([node5, node6])
+# # %%% add constraints
+# node5.fix_node('x','z', 'phi_y')
+# node6.fix_node('z', 'phi_y')
+# elem3.SetSection('Rod', {'E': E, 'A': A, 'rho': rho, 'ksi': ksi})
 
-    Kc_global_test3 = s3.GlobalConstrainedStiffness(omega_test)
-    Fc_global_test3 = s3.GlobalConstrainedForce(omega_test)
 
-    u3_free = s3.SolveUfree(Kc_global_test3, Fc_global_test3) # Free end solution
-    u_full =  s3.FullDisplacement(u3_free)
-    disp = elem3.Displacements(u_full, omega_F)
-    force = elem3.Forces(u_full, omega_F)
+# # %%% add transverse simple harmonic distributed load for omega = 100
+# omega_F = 100
+# F_omega = lambda omega: F_0 if omega == omega_F else 0
+# elem3.AddDistributedLoad(x=F_omega)
+# s3.run_connectivity()
+
+# # %%% main loop for generating FRF
+# FRF_positive = []
+# for omega_test in omega_pos:
+
+#     K_global_test3 = s3.GlobalStiffness(omega_test)
+#     F_global_test3 = s3.GlobalForce(omega_test)
+
+#     Kc_global_test3 = s3.GlobalConstrainedStiffness(omega_test)
+#     Fc_global_test3 = s3.GlobalConstrainedForce(omega_test)
+
+#     u3_free = s3.SolveUfree(Kc_global_test3, Fc_global_test3) # Free end solution
+#     u_full =  s3.FullDisplacement(u3_free)
+#     disp = elem3.Displacements(u_full, omega_F)
+#     force = elem3.Forces(u_full, omega_F)
