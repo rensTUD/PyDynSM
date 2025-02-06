@@ -27,7 +27,7 @@ s1 = Assembler('beam',analysis_type='new')
 E = 210e9
 EA = 7e6
 A = EA/E
-EI = 1.5 * 7e06
+EI = 1.5 * 7e07
 I = EI/E
 W = I
 rhoA = 1e03 
