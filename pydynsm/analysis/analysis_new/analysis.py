@@ -481,10 +481,12 @@ class Analysis:
                 if connected_indices:
                     # 
                     for dof_name, nodal_dof in node.dof_container.dofs.items():
-                        # get all dofs of elements that join at the current node and have the same constraint as the nodal dof
-                        all_dofs = [indices[dof_name] for element, indices in connected_indices 
-                                    if dof_name in indices and element.dof_containers[node.id].dofs[dof_name].value == nodal_dof.value]
-                        
+                        # Collect DOFs from elements that are monolithically connected
+                        all_dofs = [
+                            indices[dof_name] for element, indices in connected_indices
+                            if dof_name in indices and element.dof_containers[node.id].dofs[dof_name].value == nodal_dof.value
+                            and element.constraint_types[node.id][dof_name] == "monolithic"
+                        ]
                         # continue only if we still have connected dofs
                         if len(all_dofs) > 1:
                             # Use the first DOF as the reference for compatibility

@@ -580,7 +580,39 @@ class Element:
         for local_dof_name in local_dofs.get(dof_name, []):
             if self.local_dof_container[node.id].has_dof(local_dof_name):
                 self.local_dof_container[node.id].set_dof_value(local_dof_name, value=value)
+
+    def couple_dof(self, node, *dofs):
+        """
+        Ensures that the specified DOFs are monolithically connected to the node.
+        This means the DOF will be fully constrained across all elements at this node.
     
+        Parameters
+        ----------
+        node : Node
+            The node where the DOFs should be coupled.
+        *dofs : str
+            DOFs that should be monolithically connected.
+        """
+        for dof_name in dofs:
+            if dof_name in self.dof_containers[node.id].dofs:
+                self.constraint_types[node.id][dof_name] = "monolithic"
+    
+    
+    def decouple_dof(self, node, *dofs):
+        """
+        Allows the specified DOFs to move freely in the element, preventing monolithic connection.
+    
+        Parameters
+        ----------
+        node : Node
+            The node where the DOFs should be decoupled.
+        *dofs : str
+            DOFs that should be independent in the element.
+        """
+        for dof_name in dofs:
+            if dof_name in self.dof_containers[node.id].dofs:
+                self.constraint_types[node.id][dof_name] = "independent"
+
     
     def _handle_missing_dof(self, node, dof_name, value):
         """
