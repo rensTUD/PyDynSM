@@ -81,7 +81,7 @@ elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
-elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+# elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 
 # elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
@@ -107,10 +107,10 @@ elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
 # %% Testing for connectivity, B, and L matrices
 
 # %%% get global dofs of the elements
-dof_indices, num_dof = s1.get_dofs_elements()
+# dof_indices, num_dof = s1.get_dofs_elements()
 
 # %%% run the connectivity
-dof_indices, B = s1.get_B_matrix()
+# dof_indices, B = s1.get_B_matrix()
 
 # %%%%
 
@@ -131,8 +131,8 @@ elem.AddDistributedLoad(x=q_r, z=q_b)
 
 # %%% Get the global stiffness and force matrices
 
-K_lgobal = s1.GlobalStiffness(omega)
-F_global = s1.GlobalForce(omega)
+# K_lgobal = s1.GlobalStiffness(omega)
+# F_global = s1.GlobalForce(omega)
 
 # %%% get the global constrained stiffness and force
 
