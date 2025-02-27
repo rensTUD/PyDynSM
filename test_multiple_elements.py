@@ -158,6 +158,7 @@ for Omega in omega:
 # %%% get element displacements
 
 disp = s1.ElementDisplacements(u_elem, omega)
+force = s1.ElementForces(u_elem, omega,num_points=201)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
 # stress = s1.ElementForces(u_elem, omega)

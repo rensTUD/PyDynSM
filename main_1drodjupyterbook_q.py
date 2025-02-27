@@ -255,5 +255,5 @@ for omega_test in omega_pos:
 
     u3_free = s3.SolveUfree(Kc_global_test3, Fc_global_test3) # Free end solution
     u_full =  s3.FullDisplacement(u3_free)
-    R = elem3.R
     disp = elem3.Displacements(u_full, omega_F)
+    force = elem3.Forces(u_full, omega_F)
