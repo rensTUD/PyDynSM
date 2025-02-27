@@ -152,10 +152,6 @@ class Element:
                 node_dof_index = dof + i * maxNdof
                 element_type_dofs.append(node_dof_index)
                 
-        # # After processing each DOF for the current node, add their counterparts in the next node
-        # for dof in element_dofs:
-        #     element_type_dofs.append(dof + Element.maxNdof)
-                
         return element_type_dofs
     
     
@@ -268,48 +264,33 @@ class Element:
 # %% stiffness
 
     def Stiffness(self, omega):
-        '''
-        function to determine the global stiffness matrix of the element, as created from its local elements
-        '''
-        # get the global and local dof indices 
+        """
+        Function to determine the global stiffness matrix of the element, 
+        assembling it from its local element contributions.
+        """
+        # Get global and local DOF indices
         global_dof_indices = self.get_full_element_dof_indices_global()
         local_dof_indices = self.get_full_element_dof_indices_local()
-        
-        # number of dofs in the current Element
-        Ndof = len(global_dof_indices)
-        
-        # intialise empty stiffness matrix
-        k_local = np.zeros( (Ndof, Ndof), dtype=complex) 
-                       
-        # loop over all present elements and add their contribution to the full matrix
+    
+        # Initialize full 12x12 stiffness matrix
+        K_full = np.zeros((2 * Element.maxNdof, 2 * Element.maxNdof), dtype=complex)
+    
+        # Loop over all element types and accumulate stiffness contributions
         for element_type_name, element_type in self.element_types.items():
-            # add the stiffness of the element_type on the nodes present in the current Element
-            k_element = self.FullStiffness(element_type,omega,Ndof)[np.ix_(local_dof_indices,local_dof_indices)]
-            k_local[np.ix_(local_dof_indices,local_dof_indices)] += k_element[np.ix_(local_dof_indices,local_dof_indices)]
-        
-        R_sub = self.R[np.ix_(global_dof_indices, global_dof_indices)]
-        # return the full global stiffness matrix by applying the rotation matrix with the dofs present
-        k_glob = ( R_sub.T @ k_local ) @ R_sub 
-                
-        return k_glob
+            # Get element-specific DOFs
+            element_type_dofs = self.get_element_type_dofs(element_type)
+            
+            # Add element stiffness to full 12x12 matrix
+            K_full[np.ix_(element_type_dofs, element_type_dofs)] += element_type.LocalStiffness(omega)
+    
+        # Apply the full rotation matrix to transform into the global coordinate system
+        K_global_full = (self.R.T @ K_full) @ self.R  
+    
+        # Extract the relevant global DOFs **after** applying rotation
+        K_global = K_global_full[np.ix_(global_dof_indices, global_dof_indices)]
+    
+        return K_global
 
-    def FullStiffness(self, element_type, omega, Ndof):
-        '''
-        Function that assembles the full stiffness matrix based on the local stiffness matrix. 
-        
-        For example, it will translate the 2x2 K_local of the rod to the full 6x6 matrix which it is in 2D
-        
-        '''
-        # get the element_type dofs
-        element_type_dofs = self.get_element_type_dofs(element_type)
-                
-        # initialise NdofxNdof empty complex matrix
-        K_full = np.zeros( (2*Element.maxNdof, 2*Element.maxNdof), dtype=complex) 
-        
-        # assign the matrix
-        K_full[np.ix_(element_type_dofs, element_type_dofs)] = element_type.LocalStiffness(omega)
-                
-        return K_full 
 
 # %% loads
 
