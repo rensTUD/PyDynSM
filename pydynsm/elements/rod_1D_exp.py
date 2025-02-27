@@ -37,11 +37,19 @@ class Rod1D(StructuralElement):
         # Initialise local rod element with necessary parameters
         self.rho = rho
         self.A = A
+<<<<<<< HEAD
         self.ksi = ksi if ksi is not None else 0.01
         self.E = E * (1+2j*self.ksi)
         self.L = L
         # assisgn ksi if given otherwise assign a default value
         
+=======
+        # self.E = E # please see the line below for complex E value
+        self.L = L
+        # assisgn ksi if given otherwise assign a default value
+        self.ksi = ksi if ksi is not None else 0.01
+        self.E = E*(1+2j*self.ksi)
+>>>>>>> f7183ef (updated E with a complex valued E for 1D_rod_exp)
         # set q standard to 0
         self.q = np.zeros(len(dofs))
 
