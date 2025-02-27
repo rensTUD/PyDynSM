@@ -37,19 +37,11 @@ class Rod1D(StructuralElement):
         # Initialise local rod element with necessary parameters
         self.rho = rho
         self.A = A
-<<<<<<< HEAD
         self.ksi = ksi if ksi is not None else 0.01
         self.E = E * (1+2j*self.ksi)
         self.L = L
         # assisgn ksi if given otherwise assign a default value
         
-=======
-        # self.E = E # please see the line below for complex E value
-        self.L = L
-        # assisgn ksi if given otherwise assign a default value
-        self.ksi = ksi if ksi is not None else 0.01
-        self.E = E*(1+2j*self.ksi)
->>>>>>> f7183ef (updated E with a complex valued E for 1D_rod_exp)
         # set q standard to 0
         self.q = np.zeros(len(dofs))
 
@@ -127,7 +119,7 @@ class Rod1D(StructuralElement):
         # determine wavenumber
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
-        # TODO - check (this is correct from maple, need to be checked later via numerical examples)
+        # TODO - check
         el = np.array([-1j*E*(np.exp(-1j*alpha_2*L)*alpha_1 - np.exp(-1j*alpha_1*L)*alpha_2)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + -1j*E*(alpha_1 - alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2,
                        -1j*E*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2))/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + 1j*E*(np.exp(-1j*alpha_2*L)*alpha_2 - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2])
 
