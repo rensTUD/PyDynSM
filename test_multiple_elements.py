@@ -79,7 +79,7 @@ node3.fix_node('x', 'z')
 p_x = lambda omega: 1e6 if omega == omega_f else 0
 
 # add a load directly to node2
-# node2.add_load(x=p_x)
+node2.add_load(x=p_x)
 
 # %%%% Plot nodes
 
@@ -155,11 +155,10 @@ for Omega in omega:
 # u_elem = s1.FullDisplacement(u_free)
 # print(f'u_elem = \n{u_elem}\n')
 
-# %%% get element displacements
+# # %%% get element displacements
 
-disp = s1.ElementDisplacements(u_elem, omega)
-force = s1.ElementForces(u_elem, omega,num_points=201)
-stress = s1.ElementStresses(u_elem, omega,num_points=201)
+# disp = s1.ElementDisplacements(u_elem, omega)
+# stress = s1.ElementForces(u_elem, omega)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
 # stress = s1.ElementForces(u_elem, omega)

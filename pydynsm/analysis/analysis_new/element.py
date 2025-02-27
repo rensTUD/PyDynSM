@@ -65,7 +65,6 @@ class Element:
             node.connect_element(self)  # Connect this element to its nodes
                 
         # Initialize DOFContainers for global DOFs, copying DOFs from nodes
-        # self.dof_containers = {node.id: DOFContainer() for node in nodes}
         self.dof_containers = {}
         for node in nodes:
             # Load nodal DOFContainer
@@ -83,6 +82,7 @@ class Element:
         
         # set local dofs containers as empty first
         self.local_dof_container = {node.id: DOFContainer() for node in nodes}
+        
         
         # calculate geometrical properties
         self.geometrical_properties()
@@ -162,17 +162,17 @@ class Element:
         nodal_dofs : list of int
             List of global DOF indices for the element's DOFs.
         """
-        element_dof_indices_global = []
+        element_dof_indices = []
         Ndof = Element.maxNdof  
         
         for i, node in enumerate(self.nodes):
-            element_dof_container_g = self.dof_containers[node.id]
-            for dof_name, dof in element_dof_container_g.dofs.items():
+            element_dof_container = self.dof_containers[node.id]
+            for dof_name, dof in element_dof_container.dofs.items():
                 # Calculate local index if global index is not assigned
-                global_dof_index = self.dof_mapping[dof_name] + i * Ndof
-                element_dof_indices_global.append(global_dof_index)
+                local_dof_index = self.dof_mapping[dof_name] + i * Ndof
+                element_dof_indices.append(local_dof_index)
         
-        return element_dof_indices_global
+        return element_dof_indices
     
     def get_full_element_dof_indices_local(self) -> list:
         """
@@ -184,18 +184,17 @@ class Element:
         nodal_dofs : list of int
             List of local DOF indices for the element's DOFs.
         """
-        element_dof_indices_local = []
+        element_dof_indices = []
         Ndof = Element.maxNdof  
         
         for i, node in enumerate(self.nodes):
-            element_dof_container_l = self.local_dof_container[node.id]
-            for dof_name, dof in element_dof_container_l.dofs.items():
+            element_dof_container = self.local_dof_container[node.id]
+            for dof_name, dof in element_dof_container.dofs.items():
                 # Calculate local index if global index is not assigned
-                # local_dof_index = self.dof_mapping[dof_name] + i * Ndof
-                local_dof_index = self.dof_mapping[dof_name]+ i * Ndof
-                element_dof_indices_local.append(local_dof_index)
+                local_dof_index = self.dof_mapping[dof_name] + i * Ndof
+                element_dof_indices.append(local_dof_index)
         
-        return element_dof_indices_local
+        return element_dof_indices
     
     def get_specific_dof_indices_global(self, dofs) -> list:
         """
@@ -720,117 +719,17 @@ class Element:
             u_elem_contribution = element_type.LocalElementDisplacements(
                 u_local[np.ix_(specific_dof_indices)], omega, num_points
             )
-            
-            # Add the contribution of each element type to the full local elment displacements
+    
+            # Add the contribution of each element type to the full local element displacements
             for i, dof in enumerate(dofs):
                 global_dof_index = self.dof_mapping[dof]
-                if u_elem_contribution[i] is not None: 
-                    u_elem[global_dof_index] += u_elem_contribution[i] #here this global_dof_index from mapping should be different for Rod and EB, otherwise not valid for single elements?
-                        
+                if u_elem_contribution[i] is not None:
+                    u_elem[global_dof_index] += u_elem_contribution[i]
+    
         u_global = self.R[:6,:6].T @ u_elem
-        # u_global = self.R[:len(local_dof_indices),:len(global_dof_indices)].T @ u_elem # also change index here to make it general for different scenarios
+    
         return u_global
 
-# %% Element Forces
-    def Forces(self, u_nodes_global, omega, num_points=20):
-        """
-        Gets the Forces over the local axis of the element evaluated at num_points.
-    
-        Result is structured as (example in 2D config):
-            u_elem = [Nx(s)
-                      Vz(s)
-                      Myy(s)]
-    
-        Where:
-            - Nx(s) = axial force along x axis 
-            - Vz(s) = shear force along z axis 
-            - Myy(s) = bending moment about y-y axis
-    
-        Input:
-            u_nodes_global: [u_x_left
-                             u_z_left
-                             phi_y_left
-                             u_x_right
-                             u_z_right
-                             phi_y_right]
-        """
-        # Get all element dof indices present based on dof mapping
-        local_dof_indices = self.get_full_element_dof_indices_local()
-        global_dof_indices = self.get_full_element_dof_indices_global()
-        # Convert the global nodal displacements to the local element coordinate system
-        u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
-        # Initialize empty list to hold displacements for each DOF at specified points
-        F_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
-        
-        # Loop over all element types
-        for element_type_name, element_type in self.element_types.items():
-            # Get the DOFs of the element type in the context of the nodes
-            dofs = element_type.dofs
-            specific_dof_indices = self.get_specific_dof_indices_local(dofs)
-            # Calculate local displacements for the specific element type
-            F_elem_contribution = element_type.LocalElementForces(
-                u_local[np.ix_(specific_dof_indices)], omega, num_points
-            )
-            # Add the contribution of each element type to the full local elment displacements
-            for i, dof in enumerate(dofs):
-                global_dof_index = self.dof_mapping[dof]
-                if F_elem_contribution[i] is not None: 
-                    F_elem[global_dof_index] += F_elem_contribution[i] #here this global_dof_index from mapping should be different for Rod and EB, otherwise not valid for single elements?
-                    
-        F_global = self.R[:6,:6].T @ F_elem
-    # u_global = self.R[:len(local_dof_indices),:len(global_dof_indices)].T @ u_elem # also change index here to make it general for different scenarios
-        return F_global
-    
-    # %% Element stresses
-    def Stresses(self, u_nodes_global, omega, num_points=20):
-        """
-        Gets the Forces over the local axis of the element evaluated at num_points.
-    
-        Result is structured as (example in 2D config):
-            sigma_elem = [sigmaxx(s)
-                      tau(s)
-                      sigmayy(s)]
-    
-        Where:
-            - sigmaxx(s) = axial stress along x axis 
-            - tau(s) = averaged shear stress
-            - sigmayy(s) = bending stress about y-y axis
-    
-        Input:
-            u_nodes_global: [u_x_left
-                             u_z_left
-                             phi_y_left
-                             u_x_right
-                             u_z_right
-                             phi_y_right]
-        """
-        # Get all element dof indices present based on dof mapping
-        local_dof_indices = self.get_full_element_dof_indices_local()
-        global_dof_indices = self.get_full_element_dof_indices_global()
-        # Convert the global nodal displacements to the local element coordinate system
-        u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
-        # Initialize empty list to hold displacements for each DOF at specified points
-        sigma_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
-        
-        # Loop over all element types
-        for element_type_name, element_type in self.element_types.items():
-            # Get the DOFs of the element type in the context of the nodes
-            dofs = element_type.dofs
-            specific_dof_indices = self.get_specific_dof_indices_local(dofs)
-            # Calculate local displacements for the specific element type
-            sigma_elem_contribution = element_type.LocalElementStresses(
-                u_local[np.ix_(specific_dof_indices)], omega, num_points
-            )
-            # Add the contribution of each element type to the full local elment displacements
-            for i, dof in enumerate(dofs):
-                global_dof_index = self.dof_mapping[dof]
-                if sigma_elem_contribution[i] is not None: 
-                    sigma_elem[global_dof_index] += sigma_elem_contribution[i] #here this global_dof_index from mapping should be different for Rod and EB, otherwise not valid for single elements?
-                    
-        sigma_global = self.R[:6,:6].T @ sigma_elem
-    # u_global = self.R[:len(local_dof_indices),:len(global_dof_indices)].T @ u_elem # also change index here to make it general for different scenarios
-        return sigma_global
-    
 
 # %% help functions    
     def create_local_dofs_vector(self, node):

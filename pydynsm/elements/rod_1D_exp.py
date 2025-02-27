@@ -169,17 +169,16 @@ class Rod1D(StructuralElement):
         N = self.axialforce(x, omega, C)
 
         return [N]
-    
-    def LocalElementStresses(self,u_nodes_local,omega,num_points):
+    def LocalElementStresses(self, u_nodes_local, omega, num_points):
         """
-        Calculate local Element normal force N(s).
+        Calcualte the local displacements u(s).
 
         Input:
             u_nodes_global: array. The nodes in global coordinates
-            omega: array. Range of frequencies of analysis
-            num_points: value. Number of points to divide the element in.
+            omega:          array. Range of frequencies of analysis
+            num_points:     value. Number of points to divide the element in.
         Output:
-            N: array. Amplitude of elemental shear force
+            u: array. Amplitude of vertical displacement
         """
         # get local axis to evaluate on
         L = self.L

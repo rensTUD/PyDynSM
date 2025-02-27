@@ -168,10 +168,10 @@ class StructurePlotter:
             dx = x1 - x0
             dz = z1 - z0
             length = np.sqrt(dx**2 + dz**2)
-            perp_x = dz / length  # Unit normal in X
+            perp_x = -dz / length  # Unit normal in X
             perp_z = dx / length   # Unit normal in Z          
             
-            moment_x = x - scale * m_real * perp_x
+            moment_x = x + scale * m_real * perp_x
             moment_z = z + scale * m_real * perp_z
             
             moment_x_imag = x + scale * m_imag * perp_x
