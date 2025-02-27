@@ -168,10 +168,10 @@ class StructurePlotter:
             dx = x1 - x0
             dz = z1 - z0
             length = np.sqrt(dx**2 + dz**2)
-            perp_x = -dz / length  # Unit normal in X
+            perp_x = dz / length  # Unit normal in X
             perp_z = dx / length   # Unit normal in Z          
             
-            moment_x = x + scale * m_real * perp_x
+            moment_x = x - scale * m_real * perp_x
             moment_z = z + scale * m_real * perp_z
             
             moment_x_imag = x + scale * m_imag * perp_x
@@ -461,72 +461,72 @@ class StructurePlotter:
      plt.legend()
      plt.show()
 
-    def Plotbendingstresses(self, elements, stresses, scale=1e-9):
+    # def Plotbendingstresses(self, elements, stresses, scale=1e-9):
      
-     plt.figure(figsize=(10, 8))
-     plt.title('Bending Stress Plot')
-     plt.xlabel('X Coordinate')
-     plt.ylabel('Z Coordinate')
-     plt.grid(True)
-     plt.axis('equal')
+    #  plt.figure(figsize=(10, 8))
+    #  plt.title('Bending Stress Plot')
+    #  plt.xlabel('X Coordinate')
+    #  plt.ylabel('Z Coordinate')
+    #  plt.grid(True)
+    #  plt.axis('equal')
 
-     # Plot the original structure (nodes and elements)
-     for node in [node for element in elements for node in element.nodes]:
-         plt.scatter(node.x, node.z, color='red', marker='o', label='Node' if 'Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-         plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
-     for element in elements:
-         x_values = [element.nodes[0].x, element.nodes[1].x]
-         z_values = [element.nodes[0].z, element.nodes[1].z]
-         plt.plot(x_values, z_values, 'k--', linewidth=2, label='Element' if 'Element' not in plt.gca().get_legend_handles_labels()[1] else "")
+    #  # Plot the original structure (nodes and elements)
+    #  for node in [node for element in elements for node in element.nodes]:
+    #      plt.scatter(node.x, node.z, color='red', marker='o', label='Node' if 'Node' not in plt.gca().get_legend_handles_labels()[1] else "")
+    #      plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
+    #  for element in elements:
+    #      x_values = [element.nodes[0].x, element.nodes[1].x]
+    #      z_values = [element.nodes[0].z, element.nodes[1].z]
+    #      plt.plot(x_values, z_values, 'k--', linewidth=2, label='Element' if 'Element' not in plt.gca().get_legend_handles_labels()[1] else "")
 
-     as_nodes_real = {}
-     as_nodes_imag = {}
+    #  as_nodes_real = {}
+    #  as_nodes_imag = {}
 
-     # Plot the displaced elements (real and imaginary parts)
-     for element in elements:
-         # Extract the original coordinates of the nodes
-         x0 = element.nodes[0].x
-         z0 = element.nodes[0].z
-         x1 = element.nodes[1].x
-         z1 = element.nodes[1].z
+    #  # Plot the displaced elements (real and imaginary parts)
+    #  for element in elements:
+    #      # Extract the original coordinates of the nodes
+    #      x0 = element.nodes[0].x
+    #      z0 = element.nodes[0].z
+    #      x1 = element.nodes[1].x
+    #      z1 = element.nodes[1].z
          
-         # Get the displacement components (assuming u_elem has shape (6, num_points))
-         sigma_elem = stresses[element.id]
-         sigma_yy_real = np.real(sigma_elem[-1, :])
-         sigma_yy_imag = np.imag(sigma_elem[-1, :])
+    #      # Get the displacement components (assuming u_elem has shape (6, num_points))
+    #      sigma_elem = stresses[element.id]
+    #      sigma_yy_real = np.real(sigma_elem[-1, :])
+    #      sigma_yy_imag = np.imag(sigma_elem[-1, :])
          
-         num_points = len(sigma_yy_real)
-         # Create an array of points along the length of the element
-         s = np.linspace(0, 1, num_points)
+    #      num_points = len(sigma_yy_real)
+    #      # Create an array of points along the length of the element
+    #      s = np.linspace(0, 1, num_points)
    
-         # Calculate the original positions along the element's length
-         x = x0 + (x1 - x0) * s
-         z = z0 + (z1 - z0) * s
-       # Compute perpendicular direction for offsetting the moment line
-         dx = x1 - x0
-         dz = z1 - z0
-         length = np.sqrt(dx**2 + dz**2)
-         perp_x = dz / length  # Unit normal in X
-         perp_z = dx / length   # Unit normal in Z          
+    #      # Calculate the original positions along the element's length
+    #      x = x0 + (x1 - x0) * s
+    #      z = z0 + (z1 - z0) * s
+    #    # Compute perpendicular direction for offsetting the moment line
+    #      dx = x1 - x0
+    #      dz = z1 - z0
+    #      length = np.sqrt(dx**2 + dz**2)
+    #      perp_x = dz / length  # Unit normal in X
+    #      perp_z = dx / length   # Unit normal in Z          
          
-         bendingstress_x = x - scale * sigma_yy_real * perp_x
-         bendingstress_z = z + scale * sigma_yy_real * perp_z
+    #      bendingstress_x = x - scale * sigma_yy_real * perp_x
+    #      bendingstress_z = z + scale * sigma_yy_real * perp_z
          
-         bendingstress_x_imag = x - scale * sigma_yy_imag * perp_x
-         bendingstress_z_imag = z + scale * sigma_yy_imag * perp_z
+    #      bendingstress_x_imag = x - scale * sigma_yy_imag * perp_x
+    #      bendingstress_z_imag = z + scale * sigma_yy_imag * perp_z
          
-         # Plot the shear stress
-         plt.plot(bendingstress_x, bendingstress_z, 'b-', linewidth=1, label='Real Part of Bending Stress' if element.id == elements[0].id else "")
-         plt.plot(bendingstress_x_imag, bendingstress_z_imag, 'g--', linewidth=1, label='Imaginary Part of Bending Stress' if element.id == elements[0].id else "")
+    #      # Plot the shear stress
+    #      plt.plot(bendingstress_x, bendingstress_z, 'b-', linewidth=1, label='Real Part of Bending Stress' if element.id == elements[0].id else "")
+    #      plt.plot(bendingstress_x_imag, bendingstress_z_imag, 'g--', linewidth=1, label='Imaginary Part of Bending Stress' if element.id == elements[0].id else "")
          
-         # Connect moment diagram back to the structure
-         plt.plot([x[0], bendingstress_x[0]], [z[0], bendingstress_z[0]], 'b--', linewidth=1)
-         plt.plot([x[-1], bendingstress_x[-1]], [z[-1], bendingstress_z[-1]], 'b--', linewidth=1)
-         plt.plot([x[0], bendingstress_x_imag[0]], [z[0], bendingstress_z_imag[0]], 'g--', linewidth=1)
-         plt.plot([x[-1], bendingstress_z_imag[-1]], [z[-1], bendingstress_z_imag[-1]], 'g--', linewidth=1)  
-     # Add legend and show the plot
-     plt.legend()
-     plt.show()
+    #      # Connect moment diagram back to the structure
+    #      plt.plot([x[0], bendingstress_x[0]], [z[0], bendingstress_z[0]], 'b--', linewidth=1)
+    #      plt.plot([x[-1], bendingstress_x[-1]], [z[-1], bendingstress_z[-1]], 'b--', linewidth=1)
+    #      plt.plot([x[0], bendingstress_x_imag[0]], [z[0], bendingstress_z_imag[0]], 'g--', linewidth=1)
+    #      plt.plot([x[-1], bendingstress_z_imag[-1]], [z[-1], bendingstress_z_imag[-1]], 'g--', linewidth=1)  
+    #  # Add legend and show the plot
+    #  plt.legend()
+    #  plt.show()
 
     def ShowStructure(self, title='Structure Configuration'):
         plt.title(title)
