@@ -64,12 +64,8 @@ class Element:
         for node in nodes:
             node.connect_element(self)  # Connect this element to its nodes
                 
-<<<<<<< HEAD
-        # Initialize DOFContainers for global DOFs, 
-=======
         # Initialize DOFContainers for global DOFs, copying DOFs from nodes
         # self.dof_containers = {node.id: DOFContainer() for node in nodes}
->>>>>>> 2615c88 (some changes to elem.Displacements, (1) i think the mapping_dof should be different for different elements, such tha the index in the loop for elem contribution will not be out of range for single element with less DoFs (2) I changed the index of R[:6.:6] here to make it more general...)
         self.dof_containers = {}
         
         # initalise constraint type dict - options: monolithic - independent 
@@ -94,11 +90,7 @@ class Element:
             self.dof_containers[node.id] = element_dof_container
         
         # set local dofs containers as empty first
-<<<<<<< HEAD
-        self.local_dof_container = {node.id: DOFContainer() for node in nodes}        
-=======
         self.local_dof_container = {node.id: DOFContainer() for node in nodes}
->>>>>>> 2615c88 (some changes to elem.Displacements, (1) i think the mapping_dof should be different for different elements, such tha the index in the loop for elem contribution will not be out of range for single element with less DoFs (2) I changed the index of R[:6.:6] here to make it more general...)
         
         # calculate geometrical properties
         self.geometrical_properties()
