@@ -64,8 +64,13 @@ class Element:
         for node in nodes:
             node.connect_element(self)  # Connect this element to its nodes
                 
-        # Initialize DOFContainers for global DOFs, copying DOFs from nodes
+        # Initialize DOFContainers for global DOFs, 
         self.dof_containers = {}
+        
+        # initalise constraint type dict - options: monolithic - independent 
+        self.constraint_types = {node.id: {} for node in nodes}
+        
+        # copying DOFs from nodes
         for node in nodes:
             # Load nodal DOFContainer
             node_dof_container = node.dof_container
@@ -78,11 +83,13 @@ class Element:
                 element_dof = DOF(name=dof_name, value=node_dof.value, index=node_dof.index)
                 element_dof_container.dofs[dof_name] = element_dof
                 
+                # set dof to monolithic initially
+                self.constraint_types[node.id][dof_name] = 'monolithic'
+                
             self.dof_containers[node.id] = element_dof_container
         
         # set local dofs containers as empty first
-        self.local_dof_container = {node.id: DOFContainer() for node in nodes}
-        
+        self.local_dof_container = {node.id: DOFContainer() for node in nodes}        
         
         # calculate geometrical properties
         self.geometrical_properties()
@@ -264,10 +271,12 @@ class Element:
         '''
         function to determine the global stiffness matrix of the element, as created from its local elements
         '''
-        # get the local dof indices 
-        local_dof_indices = self.get_full_element_dof_indices_global()
+        # get the global and local dof indices 
+        global_dof_indices = self.get_full_element_dof_indices_global()
+        local_dof_indices = self.get_full_element_dof_indices_local()
+        
         # number of dofs in the current Element
-        Ndof = len(local_dof_indices)
+        Ndof = len(global_dof_indices)
         
         # intialise empty stiffness matrix
         k_local = np.zeros( (Ndof, Ndof), dtype=complex) 
@@ -275,10 +284,10 @@ class Element:
         # loop over all present elements and add their contribution to the full matrix
         for element_type_name, element_type in self.element_types.items():
             # add the stiffness of the element_type on the nodes present in the current Element
-            k_local += self.FullStiffness(element_type,omega,Ndof)[np.ix_(local_dof_indices,local_dof_indices)]
+            k_element = self.FullStiffness(element_type,omega,Ndof)[np.ix_(local_dof_indices,local_dof_indices)]
+            k_local[np.ix_(local_dof_indices,local_dof_indices)] += k_element[np.ix_(local_dof_indices,local_dof_indices)]
         
-        
-        R_sub = self.R[np.ix_(local_dof_indices, local_dof_indices)]
+        R_sub = self.R[np.ix_(global_dof_indices, global_dof_indices)]
         # return the full global stiffness matrix by applying the rotation matrix with the dofs present
         k_glob = ( R_sub.T @ k_local ) @ R_sub 
                 
@@ -382,7 +391,7 @@ class Element:
             
         Parameters
         ----------
-        alpha : rotation in degrees of the cross-section. I ASSUME A ROTATION OF 0 MEANS ITS PERFECTLY VERTICAL? NEED TO CHECK
+        alpha : rotation in degrees of the cross-section. I ASSUME A ROTATION OF 0 MEANS THE CROSS SECTION IS PERFECTLY VERTICAL? NEED TO CHECK
         '''
         
         ## Calculate length of beam (L) and orientation 
@@ -553,11 +562,12 @@ class Element:
                     # Update the DOF with the new value
                     self._update_dof(node, dof_name, value)
                 else:
-                    # Check if the global DOF is influenced by local DOFs
-                    local_dof_map = self.map_local_to_global_dofs(self.local_dof_container[node.id].dofs.keys())
+                    # Get list of global dofs affected by local dofs
+                    global_dofs = self.map_local_to_global_dofs(self.local_dof_container[node.id].dofs.keys())
                     # Flatten the list of global DOFs influenced by local DOFs
-                    influenced_global_dofs = [gdof for ldofs in local_dof_map.values() for gdof in ldofs]
-    
+                    influenced_global_dofs = [gdof for gdofs in global_dofs.values() for gdof in gdofs]
+                    
+                    # Check if the global DOF is influenced by local DOFs
                     if dof_name in influenced_global_dofs:
                         self._handle_missing_dof(node, dof_name, value)
                     else:
@@ -584,11 +594,11 @@ class Element:
         dof_container.set_dof(dof_name, value=value)
     
         # Update the local DOFs based on the new global DOF
-        global_dof_map = self.map_global_to_local_dofs([dof_name])
+        local_dofs = self.map_global_to_local_dofs([dof_name])
     
-        for local_dof_name in global_dof_map.get(dof_name, []):
+        for local_dof_name in local_dofs.get(dof_name, []):
             if self.local_dof_container[node.id].has_dof(local_dof_name):
-                self.local_dof_container[node.id].set_dof(local_dof_name, value=value)
+                self.local_dof_container[node.id].set_dof_value(local_dof_name, value=value)
     
     
     def _handle_missing_dof(self, node, dof_name, value):
@@ -615,11 +625,11 @@ class Element:
         print(f"DOF '{dof_name}' added to the element and prescribed to {value}.")
     
         # Update local DOFs based on the new global DOF
-        global_dof_map = self.map_global_to_local_dofs([dof_name])
+        local_dofs = self.map_global_to_local_dofs([dof_name])
     
-        for local_dof_name in global_dof_map.get(dof_name, []):
+        for local_dof_name in local_dofs.get(dof_name, []):
             if self.local_dof_container[node.id].has_dof(local_dof_name):
-                self.local_dof_container[node.id].set_dof(local_dof_name, value=value)
+                self.local_dof_container[node.id].set_dof_value(local_dof_name, value=value)
         print(f"Local DOFs updated to reflect new global DOF '{dof_name}'.")
          
 

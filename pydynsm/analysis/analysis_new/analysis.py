@@ -430,13 +430,13 @@ class Analysis:
                 for dof_name, dof in element_dof_container.dofs.items():
                     dof_indices[(node_id, element.id)][dof_name] = global_index
                     
-                    # Assign to the element itself as this can be useful
+                    # Assign the index also to the dof in the global dof container of the element
                     dof.index = global_index
                     
                     # TODO - SEE HOW TO HANDLE DOF INDICES FOR ELEMENT DOFS AND NODE DOFS IN A NEAT WAY. NOW WE HAVE THREE DIFFERENT DICTIONARIES STORING THEM. NOT THAT EFFICIENT ATM
                     # same for the node, but only if present in node
                     if node_dof_container.has_dof(dof_name):
-                        # add index only if it hasn't been assigned yet
+                        # add index only if it hasn't been assigned yet - # TODO this may not be that useful..
                         if not node_dof_container.dofs[dof_name].index:
                             node_dof_container.dofs[dof_name].index = global_index
                         
