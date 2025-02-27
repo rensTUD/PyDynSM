@@ -43,7 +43,8 @@ omega_f = omega
 # %%% Create nodes using the assembler
 
 node1 = s1.CreateNode(0,0)
-node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
+# node2 = s1.CreateNode(L,L,dof_config = [['x'],['phi_y']])
+node2 = s1.CreateNode(L,L)
 node3 = s1.CreateNode(0,L)
 
 
@@ -80,9 +81,11 @@ elem.SetSection('Rod2', {'EA': EA, 'rhoA':rhoA})
 # %%% now set the sections (or element types for that matter)
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+elem.decouple_dof(node2,'phi_y')
 
 # elem2.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem2.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
+elem2.decouple_dof(node2,'phi_y')
 
 # elem3.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 # elem3.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I})
