@@ -40,7 +40,6 @@ class EulerBernoulliBeam(StructuralElement):
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
         self.E = E*(1+2j*self.ksi)
-        self.Wb = Wb
         # set q standard to 0
         self.q = np.zeros(len(dofs))
 
@@ -378,39 +377,39 @@ class EulerBernoulliBeam(StructuralElement):
         mmt = -E*I*kappa
         return mmt
     
-    def bendingstress(self, x, omega, C=None, u_node_local=None):
-        """
-        Get the moment field of the EB beam.
+    # def bendingstress(self, x, omega, C=None, u_node_local=None):
+    #     """
+    #     Get the moment field of the EB beam.
 
-        Input:
-            x: array. Points along element
-            omega: array. Range of frequencies of analysis
-            C: array. Values of coefficients of general solution
-            u_node_local: local nodes
-        Ouput:
-            mmt: array. moment field of the given element
-        Note:
-            if C is not given, then calculate it based on u_node_local.
-        """
-        # Read all the variables
-        rho = self.rho
-        A = self.A
-        L = self.L
-        E = self.E
-        I = self.Ib
-        W = self.Wb
-        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+    #     Input:
+    #         x: array. Points along element
+    #         omega: array. Range of frequencies of analysis
+    #         C: array. Values of coefficients of general solution
+    #         u_node_local: local nodes
+    #     Ouput:
+    #         mmt: array. moment field of the given element
+    #     Note:
+    #         if C is not given, then calculate it based on u_node_local.
+    #     """
+    #     # Read all the variables
+    #     rho = self.rho
+    #     A = self.A
+    #     L = self.L
+    #     E = self.E
+    #     I = self.Ib
+    #     W = self.Wb
+    #     alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
         
-        if C is None:
-            C = self.Coefficients(u_node_local, omega)
+    #     if C is None:
+    #         C = self.Coefficients(u_node_local, omega)
         
-        kappa = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
-                (-1j*alpha_2)**2*C[1]*np.exp(-1j*alpha_2*x) +
-                (-1j*alpha_3)**2*C[2]*np.exp(-1j*alpha_3*x) +
-                (-1j*alpha_4)**2*C[3]*np.exp(-1j*alpha_4*x))
+    #     kappa = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
+    #             (-1j*alpha_2)**2*C[1]*np.exp(-1j*alpha_2*x) +
+    #             (-1j*alpha_3)**2*C[2]*np.exp(-1j*alpha_3*x) +
+    #             (-1j*alpha_4)**2*C[3]*np.exp(-1j*alpha_4*x))
         
-        bs = -E*I*kappa/W
-        return bs
+    #     bs = -E*I*kappa/W
+    #     return bs
     
     def shearforce(self, x, omega, C=None, u_node_local=None):
         """
