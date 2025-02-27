@@ -127,10 +127,7 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Bending moments plot')
-        plt.xlabel('X Coordinate')
-        plt.ylabel('Z Coordinate')
-        plt.grid(True)
-        plt.axis('equal')
+        plt.axis('off')
 
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -157,6 +154,9 @@ class StructurePlotter:
             m_real = np.real(f_elem[-1, :])
             m_imag = np.imag(f_elem[-1, :])
             
+            # m_real = m_real/np.max(np.abs(m_real)) # need to be removed after the development of scaling factor
+            # m_imag = m_imag
+            
             num_points = len(m_real)
             # Create an array of points along the length of the element
             s = np.linspace(0, 1, num_points)
@@ -168,13 +168,13 @@ class StructurePlotter:
             dx = x1 - x0
             dz = z1 - z0
             length = np.sqrt(dx**2 + dz**2)
-            perp_x = dz / length  # Unit normal in X
+            perp_x = -dz / length  # Unit normal in X
             perp_z = dx / length   # Unit normal in Z          
             
-            moment_x = x - scale * m_real * perp_x
+            moment_x = x + scale * m_real * perp_x
             moment_z = z + scale * m_real * perp_z
             
-            moment_x_imag = x - scale * m_imag * perp_x
+            moment_x_imag = x + scale * m_imag * perp_x
             moment_z_imag = z + scale * m_imag * perp_z
             
             # Plot the moment line
@@ -184,8 +184,8 @@ class StructurePlotter:
             # Connect moment diagram back to the structure
             plt.plot([x[0], moment_x[0]], [z[0], moment_z[0]], 'b--', linewidth=1)
             plt.plot([x[-1], moment_x[-1]], [z[-1], moment_z[-1]], 'b--', linewidth=1)
-            plt.plot([x[0], moment_x_imag[0]], [z[0], moment_z_imag[0]], 'r--', linewidth=1)
-            plt.plot([x[-1], moment_x_imag[-1]], [z[-1], moment_z_imag[-1]], 'r--', linewidth=1)
+            plt.plot([x[0], moment_x_imag[0]], [z[0], moment_z_imag[0]], 'g--', linewidth=1)
+            plt.plot([x[-1], moment_x_imag[-1]], [z[-1], moment_z_imag[-1]], 'g--', linewidth=1)
         # Add legend and show the plot
         plt.legend()
         plt.show()    
@@ -194,10 +194,10 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Axial Force Plot')
-        plt.xlabel('X Coordinate')
-        plt.ylabel('Z Coordinate')
-        plt.grid(True)
-        plt.axis('equal')
+        # plt.xlabel('X Coordinate')
+        # plt.ylabel('Z Coordinate')
+        # plt.grid(True)
+        plt.axis('off')
   
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -223,6 +223,8 @@ class StructurePlotter:
             f_elem = forces[element.id]
             N_real = np.real(f_elem[0, :])
             N_imag = np.imag(f_elem[0, :])
+            
+            # N_real = N_real/np.max(np.abs(N_real))
             
             num_points = len(N_real)
             # Create an array of points along the length of the element
@@ -262,10 +264,10 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Shear Force Plot')
-        plt.xlabel('X Coordinate')
-        plt.ylabel('Z Coordinate')
-        plt.grid(True)
-        plt.axis('equal')
+        # plt.xlabel('X Coordinate')
+        # plt.ylabel('Z Coordinate')
+        # plt.grid(True)
+        plt.axis('off')
   
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:

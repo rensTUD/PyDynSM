@@ -37,11 +37,11 @@ class Rod1D(StructuralElement):
         # Initialise local rod element with necessary parameters
         self.rho = rho
         self.A = A
-        # self.E = E # please see the line below for complex E value
+        self.ksi = ksi if ksi is not None else 0.01
+        self.E = E * (1+2j*self.ksi)
         self.L = L
         # assisgn ksi if given otherwise assign a default value
-        self.ksi = ksi if ksi is not None else 0.01
-        self.E = E*(1+2j*self.ksi)
+        
         # set q standard to 0
         self.q = np.zeros(len(dofs))
 
@@ -119,7 +119,7 @@ class Rod1D(StructuralElement):
         # determine wavenumber
         alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
 
-        # TODO - check (this is correct from maple, need to be checked later via numerical examples)
+        # TODO - check
         el = np.array([-1j*E*(np.exp(-1j*alpha_2*L)*alpha_1 - np.exp(-1j*alpha_1*L)*alpha_2)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + -1j*E*(alpha_1 - alpha_2)/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2,
                        -1j*E*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2))/(-np.exp(-1j*alpha_2*L) + np.exp(-1j*alpha_1*L))*q_x/rho/omega**2 + 1j*E*(np.exp(-1j*alpha_2*L)*alpha_2 - np.exp(-1j*alpha_1*L)*alpha_1)/(np.exp(-1j*alpha_2*L) - np.exp(-1j*alpha_1*L))*q_x/rho/omega**2])
 
@@ -147,52 +147,50 @@ class Rod1D(StructuralElement):
         u = self.displacement(x, omega, C)
 
         return [u]
-    
-    def LocalElementForces(self,u_nodes_local,omega,num_points):
+    def LocalElementForces(self, u_nodes_local, omega, num_points):
         """
-        Calculate local Element normal force N(s).
+        Calcualte the local displacements u(s).
 
         Input:
             u_nodes_global: array. The nodes in global coordinates
-            omega: array. Range of frequencies of analysis
-            num_points: value. Number of points to divide the element in.
+            omega:          array. Range of frequencies of analysis
+            num_points:     value. Number of points to divide the element in.
         Output:
-            N: array. Amplitude of elemental shear force
+            u: array. Amplitude of vertical displacement
         """
         # get local axis to evaluate on
         L = self.L
         x = np.linspace(0.0, L, num_points)
-        
+
         # calculate coeficients
         C = self.Coefficients(u_nodes_local, omega)
-        
+
         # get displacement
         N = self.axialforce(x, omega, C)
-        
+
         return [N]
-    
-    def LocalElementStresses(self,u_nodes_local,omega,num_points):
+    def LocalElementStresses(self, u_nodes_local, omega, num_points):
         """
-        Calculate local Element normal force N(s).
+        Calcualte the local displacements u(s).
 
         Input:
             u_nodes_global: array. The nodes in global coordinates
-            omega: array. Range of frequencies of analysis
-            num_points: value. Number of points to divide the element in.
+            omega:          array. Range of frequencies of analysis
+            num_points:     value. Number of points to divide the element in.
         Output:
-            N: array. Amplitude of elemental shear force
+            u: array. Amplitude of vertical displacement
         """
         # get local axis to evaluate on
         L = self.L
         x = np.linspace(0.0, L, num_points)
-        
+
         # calculate coeficients
         C = self.Coefficients(u_nodes_local, omega)
-        
-        # get axial stress
-        sigma_xx = self.axialstress(x, omega, C)
-        
-        return [sigma_xx]
+
+        # get displacement
+        sigma = self.axialstress(x, omega, C)
+
+        return [sigma]
 
     def Coefficients(self, u_nodes_local, omega):
         """

@@ -9,8 +9,6 @@ Created on Sun Mar 10 15:23:06 2024
 
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy.linalg as LA
-import scipy.optimize as opt
 
 # %% add package to sys and import 
 
@@ -24,23 +22,6 @@ Assembler = PDM.Assembler
 # %%% Initialise an assembler with your project name
 
 s1 = Assembler('beam',analysis_type='new')
-
-# functions for root-finder
-
-def K(ww):
-    return s1.GlobalConstrainedStiffness(ww)
-
-def det_func(ww):
-    return np.linalg.det(K(ww))
-
-def find_eigen_frequencies(f):
-    omega = 2 * np.pi * f
-    Det_M = np.array([np.linalg.det(K(ww)) for ww in omega])
-    omega_initial = omega[np.where(np.isclose(abs(np.diff(np.angle(Det_M)))/np.pi,1, atol=.1))[0]]
-    omega_m = []
-    for ww in omega_initial:
-        omega_m.append(opt.newton(det_func, ww).real)
-    return omega_m
 
 # %%% Parameters
 E = 210e9
@@ -63,23 +44,22 @@ omega_f = omega
 
 # %%% Create nodes from the assembler
 
-node1 = s1.CreateNode(0,0,dof_config = [['x'],['z']])
+node1 = s1.CreateNode(0,0)
 # node2 will have no 'z' displacement - will be handled without setting stiffness to infinity (results are still to be verified)
-node2 = s1.CreateNode(L,L,dof_config = [['x'],['z']]) 
-node3 = s1.CreateNode(0,L,dof_config = [['x'],['z']])
+node2 = s1.CreateNode(L,L,dof_config = [['z'],['phi_y']]) 
+node3 = s1.CreateNode(0,L)
 
 # %%% Now set the constraints directly onto the nodes
 
-node1.fix_node('x', 'z')
-node3.fix_node('x', 'z')
+node1.fix_node('x', 'z', 'phi_y')
+node3.fix_node('z', 'phi_y')
 
 # %%%% test adding a load to the node
 
-# define a lambda function running over omega for p_x - if constant is given that value will be evaluated for all frequencies
 p_x = lambda omega: 1e6 if omega == omega_f else 0
-
+p_z = lambda omega: 1e6*100 if omega == omega_f else 0
 # add a load directly to node2
-node2.add_load(x=p_x)
+node2.add_load(z=p_z)
 
 # %%%% Plot nodes
 
@@ -100,7 +80,7 @@ elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':1e-5*I, 'Wb': W})
 
 elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-# elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
+elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
 
 # %%% Run connectivity
 
@@ -123,44 +103,40 @@ F_global = s1.GlobalForce(omega)
 Kc_global = s1.GlobalConstrainedStiffness(omega)
 Fc_global = s1.GlobalConstrainedForce(omega)
 
-f = np.linspace(0.001, 10000, 100)
-omega = 2 * np.pi * f
+# %%% Solve for the free DOFs
 
-for Omega in omega:
-    k = np.linalg.det(K(Omega)) 
+u_free = s1.SolveUfree(Kc_global, Fc_global)
 
-# # %%% Solve for the free DOFs
+# %%% Solve for the support reactions
 
-# u_free = s1.SolveUfree(Kc_global, Fc_global)
-
-# # %%% Solve for the support reactions
-
-# f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
+f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
 
 
-# # %%%%
-# print(f'Solution of u_free = \n{u_free}\n')
+# %%%%
+print(f'Solution of u_free = \n{u_free}\n')
 
-# # %%%%
-# print(f'Global constrained stiffness matrix = \n{Kc_global}\n')
+# %%%%
+print(f'Global constrained stiffness matrix = \n{Kc_global}\n')
 
-# # %%%%
+# %%%%
 
-# print(f'Global constrained force vector = \n{Fc_global}\n')
+print(f'Global constrained force vector = \n{Fc_global}\n')
 
-# # %%%%
+# %%%%
 
-# print(f'Global support reactions = \n{f_supp}\n')
+print(f'Global support reactions = \n{f_supp}\n')
 
-# # %%%
-# u_elem = s1.FullDisplacement(u_free)
-# print(f'u_elem = \n{u_elem}\n')
+# %%%
+u_elem = s1.FullDisplacement(u_free)
+print(f'u_elem = \n{u_elem}\n')
 
-# # %%% get element displacements
+# %%% get element displacements
 
-# disp = s1.ElementDisplacements(u_elem, omega)
-# stress = s1.ElementForces(u_elem, omega)
+disp = s1.ElementDisplacements(u_elem, omega)
+force = s1.ElementForces(u_elem, omega)
+stress = s1.ElementForces(u_elem, omega)
 
-# # %%% Plot displacements
+# %%% Plot displacements
 
-# s1.PlotElementDisplacements(disp,scale=1)
+s1.PlotElementDisplacements(disp,scale=1)
+s

@@ -39,8 +39,8 @@ class EulerBernoulliBeam(StructuralElement):
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
-        self.E = E*(1+2*self.ksi)
-        self.Wb = Wb
+        self.E = E*(1+2j*self.ksi)
+        self.Wb = Wb 
         # set q standard to 0
         self.q = np.zeros(len(dofs))
 
