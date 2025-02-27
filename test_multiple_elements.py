@@ -112,7 +112,6 @@ q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
 # elem1.AddDistributedLoad(x=q_b)
 
-
 # %%% Get the global stiffness and force matrices
 
 K_lgobal = s1.GlobalStiffness(omega)
@@ -157,7 +156,6 @@ for Omega in omega:
 # print(f'u_elem = \n{u_elem}\n')
 
 # %%% get element displacements
-
 disp = s1.ElementDisplacements(u_elem, omega)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
