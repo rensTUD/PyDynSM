@@ -155,7 +155,9 @@ for Omega in omega:
 # u_elem = s1.FullDisplacement(u_free)
 # print(f'u_elem = \n{u_elem}\n')
 
-# # %%% get element displacements
+# %%% get element displacements
+
+disp = s1.ElementDisplacements(u_elem, omega)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
 # stress = s1.ElementForces(u_elem, omega)
