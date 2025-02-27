@@ -46,7 +46,11 @@ def find_eigen_frequencies(f):
 E = 210e9
 EA = 7e6
 A = EA/E
+<<<<<<< HEAD
 EI = 1.5 * 7e07
+=======
+EI = 1.5 * 7e06
+>>>>>>> daaedcd (some changes to py files... need addtional test file for single element)
 I = EI/E
 W = I
 rhoA = 1e03 
@@ -79,7 +83,7 @@ node3.fix_node('x', 'z')
 p_x = lambda omega: 1e6 if omega == omega_f else 0
 
 # add a load directly to node2
-node2.add_load(x=p_x)
+# node2.add_load(x=p_x)
 
 # %%%% Plot nodes
 
@@ -97,10 +101,17 @@ s1.PlotStructure(plot_elements=True)
 # %%% now set the sections onto the elements
 
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+<<<<<<< HEAD
 elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':1e-5*I, 'Wb': W})
 
 elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 # elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
+=======
+elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
+
+elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
+elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
+>>>>>>> daaedcd (some changes to py files... need addtional test file for single element)
 
 # %%% Run connectivity
 
@@ -110,7 +121,12 @@ s1.run_connectivity()
 
 q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
+<<<<<<< HEAD
 # elem1.AddDistributedLoad(x=q_b)
+=======
+elem.AddDistributedLoad(x=q_r, z=q_b)
+
+>>>>>>> daaedcd (some changes to py files... need addtional test file for single element)
 
 # %%% Get the global stiffness and force matrices
 
@@ -159,6 +175,7 @@ for Omega in omega:
 
 disp = s1.ElementDisplacements(u_elem, omega)
 force = s1.ElementForces(u_elem, omega,num_points=201)
+stress = s1.ElementStresses(u_elem, omega,num_points=201)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
 # stress = s1.ElementForces(u_elem, omega)
