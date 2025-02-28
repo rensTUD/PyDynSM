@@ -215,6 +215,13 @@ class Assembler:
         
         return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points)
     
+    def SolveEigenvector(self, omega):
+        '''
+        Returns the eigenvector at a specific omega
+        '''
+        
+        return self.Analysis.SolveEigenvector(self.nodes, self.elements, omega)
+    
 # %% POSTPROCESS
 
     def PlotElementDisplacements(self,Element_displacements: dict, scale: float = 1.0) -> None:
