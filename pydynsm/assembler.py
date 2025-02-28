@@ -264,12 +264,6 @@ class Assembler:
          Plots the shear forces
          '''
          self.StructurePlotter.Plotaxialstresses(self.elements, Element_stresses, scale=scale)
-    
-    def PlotBendingstresses(self,Element_stresses: dict, scale: float = 1.0) -> None:
-         '''
-         Plots the shear forces
-         '''
-         self.StructurePlotter.Plotbendingstresses(self.elements, Element_stresses, scale=scale)
 
 # %% Testing area
     def get_dofs_elements(self):
