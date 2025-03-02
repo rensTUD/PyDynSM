@@ -698,7 +698,6 @@ class Element:
     
         # Initialize empty list to hold displacements for each DOF at specified points
         u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
-        # u_elem = [None] * Ndof 
     
         # Loop over all element types
         for element_type_name, element_type in self.element_types.items():
@@ -815,9 +814,7 @@ class Element:
                         sigma_elem[global_dof_index] += sigma_elem_contribution[i]
                         
             sigma_global = sigma_elem
-            return sigma_global   
-
-
+            return sigma_global
 # %% help functions    
     def create_local_dofs_vector(self, node):
         """

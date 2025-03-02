@@ -15,7 +15,7 @@ from .structuralelement import StructuralElement, ElementFactory
 class EulerBernoulliBeam(StructuralElement):
     """Class for Euler-Bernoulli beam element."""
 
-    def __init__(self, rho, A, E, Ib, Wb, L, ksi=None):
+    def __init__(self, rho, A, E, Ib, L, ksi=None):
         """
         Initialise EulerBernoulliBeam class.
 
@@ -87,32 +87,33 @@ class EulerBernoulliBeam(StructuralElement):
 
         return K_local
 
+
     def ElementWaveNumbers(self, omega):
-        """
-        Determine the wavenumbers of Euler-Bernoulli beam.
-
-        Input:
-            omega: array. Range of frequencies of analysis.
-        Output:
-            alpha_1, alpha_2, alpha_3, alpha_4: values. Wavenumbers
-        """
-        rho = self.rho
-        A = self.A
-        E = self.E
-        Ib = self.Ib
-        # Copy-paste from Maple document of Wavenumbers
-        # 4th-order derivative in x, so 4 wavenumbers
-        alpha_1 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
-        alpha_2 = 1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
-        alpha_3 = -1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
-        alpha_4 = -1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
-
-        return alpha_1, alpha_2, alpha_3, alpha_4
+            """
+            Determine the wavenumbers of Euler-Bernoulli beam.
+    
+            Input:
+                omega: array. Range of frequencies of analysis.
+            Output:
+                alpha_1, alpha_2, alpha_3, alpha_4: values. Wavenumbers
+            """
+            rho = self.rho
+            A = self.A
+            E = self.E
+            Ib = self.Ib
+            # Copy-paste from Maple document of Wavenumbers
+            # 4th-order derivative in x, so 4 wavenumbers
+            alpha_1 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
+            alpha_2 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
+            alpha_3 = -1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
+            alpha_4 = -1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
+    
+            return alpha_1, alpha_2, alpha_3, alpha_4
 
     def LocalDistributedLoad(self, q, omega):
         """
         Add a distributed load to the local element.
-
+    
         Input:
             q: array. Distributed load. With a shape such as:
             q = [q_z, q_phi]
@@ -122,29 +123,26 @@ class EulerBernoulliBeam(StructuralElement):
         """
         # assign load to itself to keep track
         self.q = q
-
+    
         # assign local variables for ease of coding
         rho = self.rho
         A = self.A
         E = self.E
-        Ib = self.Ib
+        I_b = self.Ib
         L = self.L
-
+    
         # determine wavenumber
-        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
-
+        alpha1, alpha2, alpha3, alpha4 = self.ElementWaveNumbers(omega)
+    
         # extract loads
         q_z = q[0]
         q_phi = q[1]
-
+    
         # TODO - check for correctness
-        el = np.array([-1j*E*Ib*(alpha_3*alpha_4*(alpha_3 - alpha_4)*(alpha_3 + alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_2*alpha_4*(alpha_2 - alpha_4)*(alpha_2 + alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_2 + alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + alpha_1*(alpha_4*(alpha_1 - alpha_4)*(alpha_1 + alpha_4)*(alpha_2 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_3)) - alpha_3*(alpha_1 - alpha_3)*(alpha_1 + alpha_3)*(alpha_2 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_2*(alpha_1 - alpha_2)*(alpha_1 + alpha_2)*(alpha_3 - alpha_4)))/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A + 1j*E*(alpha_1*(alpha_3 - alpha_4)*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*(alpha_2 + alpha_3 + alpha_4)*np.exp(-1j*alpha_1*L) - alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*(alpha_1 + alpha_3 + alpha_4)*np.exp(-1j*alpha_2*L) + (alpha_1 - alpha_2)*(alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 + alpha_2 + alpha_4)*np.exp(-1j*alpha_3*L) - np.exp(-1j*alpha_4*L)*alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 + alpha_2 + alpha_3)))*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A,
-                       E*(alpha_3*alpha_4*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_2*alpha_4*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + alpha_1*(alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)))*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A - E*(alpha_1*(alpha_3 - alpha_4)*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*np.exp(-1j*alpha_1*L) - alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*alpha_2*L) + (alpha_1 - alpha_2)*(alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*np.exp(-1j*alpha_3*L) - np.exp(-1j*alpha_4*L)*alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)))*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A,
-                       1j*(alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 - alpha_2)*(alpha_1 + alpha_2 + alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_2 + alpha_3)) - alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_2)*(alpha_1 + alpha_2 + alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_2 + alpha_4)) + (alpha_2*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*(alpha_1 + alpha_3 + alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_3 + alpha_4)) - np.exp(-1j*L*(alpha_2 + alpha_3 + alpha_4))*alpha_1*(alpha_2 - alpha_4)*(alpha_2 - alpha_3)*(alpha_2 + alpha_3 + alpha_4))*(alpha_3 - alpha_4))*E*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A + 1j*E*(alpha_1*alpha_2*(alpha_1 - alpha_2)*(alpha_1 + alpha_2)*(alpha_3 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_1*alpha_3*(alpha_1 - alpha_3)*(alpha_1 + alpha_3)*(alpha_2 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_1*alpha_4*(alpha_1 - alpha_4)*(alpha_1 + alpha_4)*(alpha_2 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_4)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_2 + alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - alpha_4*(alpha_2*(alpha_2 - alpha_4)*(alpha_2 + alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) - np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_3*(alpha_3 - alpha_4)*(alpha_3 + alpha_4)*(alpha_1 - alpha_2)))*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A,
-                       -E*(alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_3)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2 + alpha_3)) - alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2 + alpha_4)) + (alpha_2*(alpha_1 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3 + alpha_4)) - np.exp(-1j*L*(alpha_2 + alpha_3 + alpha_4))*alpha_1*(alpha_2 - alpha_4)*(alpha_2 - alpha_3))*(alpha_3 - alpha_4))*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A - E*(alpha_1*alpha_2*(alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - alpha_1*alpha_3*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + alpha_1*alpha_4*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + alpha_2*alpha_3*(alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2*(alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) - np.exp(-1j*L*(alpha_3 + alpha_4))*alpha_3*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*alpha_4)*Ib/((alpha_3 - alpha_4)*(alpha_1 - alpha_2)*np.exp(-1j*L*(alpha_1 + alpha_2)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_1 + alpha_3)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_1 + alpha_4)) + (alpha_2 - alpha_3)*(alpha_1 - alpha_4)*np.exp(-1j*L*(alpha_2 + alpha_3)) - (alpha_2 - alpha_4)*(alpha_1 - alpha_3)*np.exp(-1j*L*(alpha_2 + alpha_4)) + np.exp(-1j*L*(alpha_3 + alpha_4))*(alpha_3 - alpha_4)*(alpha_1 - alpha_2))*q_z/omega**2/rho/A])
-
+        el = np.array([1j * I_b * E * (alpha3 * alpha4 * (alpha3 - alpha4) * (alpha3 + alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - alpha4 * alpha2 * (alpha2 - alpha4) * (alpha2 + alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + alpha2 * alpha3 * (alpha2 - alpha3) * (alpha2 + alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha4 * (alpha1 - alpha4) * (alpha1 + alpha4) * (alpha2 - alpha3) * np.exp(-1j * L * (alpha2 + alpha3)) - alpha3 * (alpha1 - alpha3) * (alpha1 + alpha3) * (alpha2 - alpha4) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * alpha2 * (alpha1 - alpha2) * (alpha1 + alpha2) * (alpha3 - alpha4)) * alpha1) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A + -1j * I_b * E * (alpha1 * (alpha3 - alpha4) * (alpha2 - alpha4) * (alpha2 - alpha3) * (alpha2 + alpha3 + alpha4) * np.exp(-1j * alpha1 * L) - alpha2 * (alpha3 - alpha4) * (alpha1 - alpha4) * (alpha1 - alpha3) * (alpha1 + alpha3 + alpha4) * np.exp(-1j * alpha2 * L) + (alpha3 * (alpha2 - alpha4) * (alpha1 - alpha4) * (alpha1 + alpha2 + alpha4) * np.exp(-1j * alpha3 * L) - np.exp(-1j * alpha4 * L) * alpha4 * (alpha2 - alpha3) * (alpha1 - alpha3) * (alpha1 + alpha2 + alpha3)) * (alpha1 - alpha2)) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A,-I_b * E * (alpha3 * alpha4 * (alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - alpha4 * alpha2 * (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + alpha2 * alpha3 * (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha4 * (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - alpha3 * (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * alpha2 * (alpha3 - alpha4) * (alpha1 - alpha2)) * alpha1) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A + I_b * E * (alpha1 * (alpha3 - alpha4) * (alpha2 - alpha4) * (alpha2 - alpha3) * np.exp(-1j * alpha1 * L) - alpha2 * (alpha3 - alpha4) * (alpha1 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * alpha2 * L) + (alpha3 * (alpha2 - alpha4) * (alpha1 - alpha4) * np.exp(-1j * alpha3 * L) - np.exp(-1j * alpha4 * L) * alpha4 * (alpha2 - alpha3) * (alpha1 - alpha3)) * (alpha1 - alpha2)) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A,-1j * I_b * E * (alpha4 * (alpha2 - alpha3) * (alpha1 - alpha3) * (alpha1 - alpha2) * (alpha1 + alpha2 + alpha3) * np.exp(-1j * L * (alpha1 + alpha2 + alpha3)) - alpha3 * (alpha2 - alpha4) * (alpha1 - alpha4) * (alpha1 - alpha2) * (alpha1 + alpha2 + alpha4) * np.exp(-1j * L * (alpha1 + alpha2 + alpha4)) + (alpha2 * (alpha1 - alpha4) * (alpha1 - alpha3) * (alpha1 + alpha3 + alpha4) * np.exp(-1j * L * (alpha1 + alpha3 + alpha4)) - np.exp(-1j * L * (alpha2 + alpha3 + alpha4)) * alpha1 * (alpha2 - alpha4) * (alpha2 - alpha3) * (alpha2 + alpha3 + alpha4)) * (alpha3 - alpha4)) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A + -1j * I_b * E * (alpha1 * alpha2 * (alpha1 - alpha2) * (alpha1 + alpha2) * (alpha3 - alpha4) * np.exp(-1j * L * (alpha1 + alpha2)) - alpha1 * alpha3 * (alpha1 - alpha3) * (alpha1 + alpha3) * (alpha2 - alpha4) * np.exp(-1j * L * (alpha1 + alpha3)) + alpha4 * alpha1 * (alpha1 - alpha4) * (alpha1 + alpha4) * (alpha2 - alpha3) * np.exp(-1j * L * (alpha1 + alpha4)) + alpha2 * alpha3 * (alpha2 - alpha3) * (alpha2 + alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - alpha4 * (alpha2 * (alpha2 - alpha4) * (alpha2 + alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) - np.exp(-1j * L * (alpha3 + alpha4)) * alpha3 * (alpha3 - alpha4) * (alpha3 + alpha4) * (alpha1 - alpha2))) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A,I_b * E * (alpha4 * (alpha2 - alpha3) * (alpha1 - alpha3) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2 + alpha3)) - alpha3 * (alpha2 - alpha4) * (alpha1 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2 + alpha4)) + (alpha2 * (alpha1 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3 + alpha4)) - np.exp(-1j * L * (alpha2 + alpha3 + alpha4)) * alpha1 * (alpha2 - alpha4) * (alpha2 - alpha3)) * (alpha3 - alpha4)) / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A + I_b * (alpha1 * alpha2 * (alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - alpha1 * alpha3 * (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + alpha4 * alpha1 * (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + alpha2 * alpha3 * (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - alpha4 * (alpha2 * (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) - np.exp(-1j * L * (alpha3 + alpha4)) * alpha3 * (alpha3 - alpha4) * (alpha1 - alpha2))) * E / ((alpha3 - alpha4) * (alpha1 - alpha2) * np.exp(-1j * L * (alpha1 + alpha2)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha1 + alpha3)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha1 + alpha4)) + (alpha2 - alpha3) * (alpha1 - alpha4) * np.exp(-1j * L * (alpha2 + alpha3)) - (alpha2 - alpha4) * (alpha1 - alpha3) * np.exp(-1j * L * (alpha2 + alpha4)) + np.exp(-1j * L * (alpha3 + alpha4)) * (alpha3 - alpha4) * (alpha1 - alpha2)) * q_z / omega ** 2 / rho / A])
+    
+    
         return el
-
     def LocalElementDisplacements(self, u_nodes_local, omega, num_points):
         """
         Calculate local displacements w(s) and rotational displacement phi(s).
@@ -257,7 +255,7 @@ class EulerBernoulliBeam(StructuralElement):
                            1j*np.exp(-1j*alpha_4*L)*alpha_4]])
 
         # TODO - check for correctness
-        u_load = np.array([q_z/omega**2/rho/A, 0, q_z/omega**2/rho/A, 0])
+        u_load = np.array([-q_z/omega**2/rho/A, 0, -q_z/omega**2/rho/A, 0])
         C = np.linalg.inv(A_mat) @ (u_nodes_local - u_load)
         # + np.array([1/(E*Ib*beta_b**4),0,1/(E*Ib*beta_b**4),0]) * q)
 
@@ -295,7 +293,7 @@ class EulerBernoulliBeam(StructuralElement):
             C = self.Coefficients(u_node_local, omega)
 
         # displacements
-        u_load = np.array([q_z/omega**2/rho/A])
+        u_load = np.array([-q_z/omega**2/rho/A])
         w = (C[0]*np.exp(-1j*alpha_1*x) +
              C[1]*np.exp(-1j*alpha_2*x) +
              C[2]*np.exp(-1j*alpha_3*x) +
@@ -368,12 +366,12 @@ class EulerBernoulliBeam(StructuralElement):
         if C is None:
             C = self.Coefficients(u_node_local, omega)
         
-        kappa = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
+        dudx2 = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
                 (-1j*alpha_2)**2*C[1]*np.exp(-1j*alpha_2*x) +
                 (-1j*alpha_3)**2*C[2]*np.exp(-1j*alpha_3*x) +
                 (-1j*alpha_4)**2*C[3]*np.exp(-1j*alpha_4*x))
         
-        mmt = -E*I*kappa
+        mmt = -E*I*dudx2
         return mmt
     
     def shearforce(self, x, omega, C=None, u_node_local=None):

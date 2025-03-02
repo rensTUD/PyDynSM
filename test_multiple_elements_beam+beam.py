@@ -77,7 +77,7 @@ s1.PlotStructure(plot_elements=True)
 # %%% now set the sections onto the elements
 
 elem.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
-elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':1e-5*I, 'Wb': W})
+elem.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':1I, 'Wb': W})
 
 elem1.SetSection('Rod', {'E': E, 'A':A, 'rho':rho})
 elem1.SetSection('EulerBernoulli Beam', {'E': E, 'A':A, 'rho':rho, 'Ib':I, 'Wb': W})
@@ -139,4 +139,3 @@ stress = s1.ElementForces(u_elem, omega)
 # %%% Plot displacements
 
 s1.PlotElementDisplacements(disp,scale=1)
-s
