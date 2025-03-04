@@ -238,7 +238,57 @@ class Analysis:
         u_full[np.ix_(constrained_indices)] = constrained_values
         
         return u_full
+
+    def SolveEigenvector(self, nodes, elements, omega, fixed_index=0):
+            """
+            Computes an eigenvector for the system using the constrained global stiffness matrix.
     
+            Parameters
+            ----------
+            nodes : list of Node
+                List of nodes in the structural system.
+            elements : list of Element
+                List of elements in the structural system.
+            omega : float
+                Frequency parameter.
+            fixed_index : int, optional
+                Index of the eigenvector component to be set to 1 (default is 0).
+    
+            Returns
+            -------
+            U : numpy.ndarray
+                Computed eigenvector normalized by fixing one component to 1.
+            """
+            # Retrieve the constrained global stiffness matrix
+            K_constrained = self.GlobalConstrainedStiffness(nodes, elements, omega)
+    
+            # Ensure the matrix is not singular
+            if np.linalg.matrix_rank(K_constrained) < K_constrained.shape[0]:
+                raise ValueError("Singular stiffness matrix, the system may be improperly constrained.")
+    
+            # Define the number of DOFs
+            num_dofs = K_constrained.shape[0]
+    
+            # Partition the matrix explicitly
+            free_dofs = [i for i in range(num_dofs) if i != fixed_index]
+    
+            # Extract submatrices
+            K_rr = K_constrained[np.ix_(free_dofs, free_dofs)]  # Reduced stiffness matrix
+            K_rp = K_constrained[np.ix_(free_dofs, [fixed_index])]  # Column corresponding to fixed index
+    
+            # Solve for the unknown components
+            try:
+                U_r = -np.linalg.solve(K_rr, K_rp).flatten()  # Solve for U_r
+            except np.linalg.LinAlgError:
+                raise ValueError("Numerical issue: unable to solve for eigenvector.")
+                
+            # Reconstruct the full eigenvector
+            U = np.zeros(num_dofs, dtype=complex)
+            U[fixed_index] = 1  # Set fixed value
+            U[free_dofs] = U_r  # Assign solved components
+    
+            return U   
+
     def ElementDisplacements(self, elements, u_nodes_global, omega, num_points=20):
         """
         Gathers the displacements for each element from the element-level calculations.
@@ -289,56 +339,6 @@ class Analysis:
     
         return element_displacements
     
-    def SolveEigenvector(self, nodes, elements, omega, fixed_index=0):
-            """
-            Computes an eigenvector for the system using the constrained global stiffness matrix.
-    
-            Parameters
-            ----------
-            nodes : list of Node
-                List of nodes in the structural system.
-            elements : list of Element
-                List of elements in the structural system.
-            omega : float
-                Frequency parameter.
-            fixed_index : int, optional
-                Index of the eigenvector component to be set to 1 (default is 0).
-    
-            Returns
-            -------
-            U : numpy.ndarray
-                Computed eigenvector normalized by fixing one component to 1.
-            """
-            # Retrieve the constrained global stiffness matrix
-            K_constrained = self.GlobalConstrainedStiffness(nodes, elements, omega)
-    
-            # Ensure the matrix is not singular
-            if np.linalg.matrix_rank(K_constrained) < K_constrained.shape[0]:
-                raise ValueError("Singular stiffness matrix, the system may be improperly constrained.")
-    
-            # Define the number of DOFs
-            num_dofs = K_constrained.shape[0]
-    
-            # Partition the matrix explicitly
-            free_dofs = [i for i in range(num_dofs) if i != fixed_index]
-    
-            # Extract submatrices
-            K_rr = K_constrained[np.ix_(free_dofs, free_dofs)]  # Reduced stiffness matrix
-            K_rp = K_constrained[np.ix_(free_dofs, [fixed_index])]  # Column corresponding to fixed index
-    
-            # Solve for the unknown components
-            try:
-                U_r = -np.linalg.solve(K_rr, K_rp).flatten()  # Solve for U_r
-            except np.linalg.LinAlgError:
-                raise ValueError("Numerical issue: unable to solve for eigenvector.")
-                
-            # Reconstruct the full eigenvector
-            U = np.zeros(num_dofs, dtype=complex)
-            U[fixed_index] = 1  # Set fixed value
-            U[free_dofs] = U_r  # Assign solved components
-    
-            return U                
-    
     def ElementForces(self, elements, u_nodes_global, omega, num_points=20):
         """
         Gathers the displacements for each element from the element-level calculations.
@@ -388,9 +388,6 @@ class Analysis:
             element_forces[element.id] = f_elem
     
         return element_forces
-    
-
-    
 
     def ElementStresses(self, elements, u_nodes_global, omega, num_points=20):
         """
@@ -441,6 +438,7 @@ class Analysis:
             element_stresses[element.id] = s_elem
     
         return element_stresses
+    
 # %% specific methods for this method of analysis
 
     def find_unique_redundant_dofs(self, B):

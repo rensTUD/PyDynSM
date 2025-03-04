@@ -124,7 +124,7 @@ s1.run_connectivity()
 # s1.PlotStructure(plot_elements=True)
 
 
-# %%% Add distributed load per DOF in global coord system
+# %%% Add distributed load per DOF in local coord system
 
 q_r = lambda omega: 1e2 if omega == omega_f else 0
 q_b = lambda omega: 1e6 if omega == omega_f else 0
@@ -149,8 +149,6 @@ u_free = s1.SolveUfree(Kc_global, Fc_global)
 
 f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
 
-# %%%%
-# TODO: IMPORTANT: RESULTS ARE SLIGHTLY OFF FROM THE NOTEBOOK 3.3 (SHOULD INVESTIGATE)
 
 # %%%%
 print(f'Solution of u_free = \n{u_free}\n')

@@ -746,8 +746,10 @@ class Element:
         # Get all element dof indices present based on dof mapping
         local_dof_indices = self.get_full_element_dof_indices_local()
         global_dof_indices = self.get_full_element_dof_indices_global()
+        
         # Convert the global nodal displacements to the local element coordinate system
         u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
+        
         # Initialize empty list to hold displacements for each DOF at specified points
         F_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
         
@@ -756,10 +758,12 @@ class Element:
             # Get the DOFs of the element type in the context of the nodes
             dofs = element_type.dofs
             specific_dof_indices = self.get_specific_dof_indices_local(dofs)
+            
             # Calculate local displacements for the specific element type
             F_elem_contribution = element_type.LocalElementForces(
                 u_local[np.ix_(specific_dof_indices)], omega, num_points
             )
+            
             # Add the contribution of each element type to the full local elment displacements
             for i, dof in enumerate(dofs):
                 global_dof_index = self.dof_mapping[dof]
@@ -769,6 +773,7 @@ class Element:
         F_global =  F_elem
    
         return F_global
+    
 # %% Element Stresses
     def Stresses(self, u_nodes_global, omega, num_points=20):
             """
@@ -793,8 +798,10 @@ class Element:
             # Get all element dof indices present based on dof mapping
             local_dof_indices = self.get_full_element_dof_indices_local()
             global_dof_indices = self.get_full_element_dof_indices_global()
+            
             # Convert the global nodal displacements to the local element coordinate system
             u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
+            
             # Initialize empty list to hold displacements for each DOF at specified points
             sigma_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
             
@@ -803,10 +810,12 @@ class Element:
                 # Get the DOFs of the element type in the context of the nodes
                 dofs = element_type.dofs
                 specific_dof_indices = self.get_specific_dof_indices_local(dofs)
+                
                 # Calculate local displacements for the specific element type
                 sigma_elem_contribution = element_type.LocalElementStresses(
                     u_local[np.ix_(specific_dof_indices)], omega, num_points
                 )
+                
                 # Add the contribution of each element type to the full local elment displacements
                 for i, dof in enumerate(dofs):
                     global_dof_index = self.dof_mapping[dof]
@@ -814,7 +823,9 @@ class Element:
                         sigma_elem[global_dof_index] += sigma_elem_contribution[i]
                         
             sigma_global = sigma_elem
+            
             return sigma_global
+        
 # %% help functions    
     def create_local_dofs_vector(self, node):
         """
