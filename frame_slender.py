@@ -98,8 +98,8 @@ rodc = {
 }
 
 elements[0].SetSection('EulerBernoulli Beam', column)
-elements[1].SetSection('EulerBernoulli Beam', column)
-elements[2].SetSection('EulerBernoulli Beam', beam)
+elements[2].SetSection('EulerBernoulli Beam', column)
+elements[1].SetSection('EulerBernoulli Beam', beam)
 
 s1.run_connectivity()
 
