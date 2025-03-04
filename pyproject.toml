@@ -16,7 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-license = { file = "LICENSE" }  # ✅ Correct way to specify a license file
+license = { file = "LICENSE" }  # Correct way to specify a license file
 
 # Automatically detected dependencies (use pipreqs in root folder of release: 'pipreqs src/pydynsm --print')
 dependencies = [
@@ -31,7 +31,7 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}  # Uses the "src" layout
-include-package-data = true  # ✅ Ensures MANIFEST.in is used
+include-package-data = true  # Ensures MANIFEST.in is used
 license-files = [] # temporary fix for setuptools throwing error with license
 
 [tool.setuptools.packages.find]

@@ -164,3 +164,4 @@ cython_debug/
 
 PyDynSM.zip
 *.orig
+src/*.egg-info/
