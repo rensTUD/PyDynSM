@@ -7,5 +7,11 @@ include manifest.in
 # get source
 graft src
 
-# exclude 
+# exclude directories
+prune examples
+prune tests
+prune notebooks
+.spyproject
+
+# exclude files
 exclude .gitignore
