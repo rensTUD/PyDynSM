@@ -23,7 +23,7 @@ Assembler = PDM.Assembler
 
 # %%% Initialise an assembler with your project name
 
-s1 = Assembler('beam',analysis_type='new')
+s1 = Assembler('beam')
 
 # functions for root-finder
 
@@ -157,7 +157,7 @@ for Omega in omega:
 
 # %%% get element displacements
 
-disp = s1.ElementDisplacements(u_elem, omega)
+# disp = s1.ElementDisplacements(u_elem, omega)
 
 # disp = s1.ElementDisplacements(u_elem, omega)
 # stress = s1.ElementForces(u_elem, omega)

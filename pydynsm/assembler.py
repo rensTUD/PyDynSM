@@ -11,13 +11,12 @@ Created on Tue Mar 12 19:21:45 2024
 # %% import others
 
 from . import plotter
-from .analysis import analysis_old
-from .analysis import analysis_new
+from . import analysis
 # %% main class definition
 
 class Assembler:
         
-    def __init__(self, name, analysis_type = 'old'):
+    def __init__(self, name):
         '''
         Initialisation of assembler.
         '''
@@ -31,14 +30,9 @@ class Assembler:
         
         # load dependencies that are injected
         self.StructurePlotter = plotter.StructurePlotter()
-        if analysis_type == 'old':
-            analysis_type = analysis_old
-        elif analysis_type == 'new':
-            analysis_type = analysis_new
-            
-        self.Node = analysis_type.Node
-        self.Element = analysis_type.Element
-        self.Analysis = analysis_type.Analysis()
+        self.Node = analysis.Node
+        self.Element = analysis.Element
+        self.Analysis = analysis.Analysis()
             
         print(f"Assembler '{self.name}' successfully initialised")
 

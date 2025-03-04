@@ -8,7 +8,7 @@ Created on Wed Jun 12 11:52:01 2024
 # Import dependencies
 import numpy as np
 from scipy.linalg import inv
-from ...elements import ElementFactory
+from ..elements import ElementFactory
 from collections import defaultdict
 
 # Class definition

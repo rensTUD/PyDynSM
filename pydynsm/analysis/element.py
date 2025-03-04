@@ -2,7 +2,7 @@
 
 import numpy as np
 from collections import defaultdict
-from ...elements import ElementFactory
+from ..elements import ElementFactory
 from .dofs import DOFContainer, DOF
 
 
