@@ -214,6 +214,18 @@ class Assembler:
         '''
         
         return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points)
+    def ElementForces(self, u_full, omega, num_points=20):
+        '''
+        Returns all element forces
+        '''
+        
+        return self.Analysis.ElementForces(self.elements, u_full, omega, num_points)
+    def ElementStresses(self, u_full, omega, num_points=20):
+        '''
+        Returns all element stresses
+        '''
+        
+        return self.Analysis.ElementStresses(self.elements, u_full, omega, num_points)
     
     def SolveEigenvector(self, omega):
         '''
@@ -229,6 +241,42 @@ class Assembler:
         Plots the displacements
         '''
         self.StructurePlotter.PlotDisplacements(self.elements, Element_displacements, scale=scale)
+        
+    
+    def PlotMoments(self,Element_forces: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the moments
+         '''
+         self.StructurePlotter.Plotmoments(self.elements, Element_forces, scale=scale)
+    
+    def PlotAxialforces(self,Element_forces: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the axial forces
+         '''
+         self.StructurePlotter.Plotaxialforces(self.elements, Element_forces, scale=scale)
+    
+    def PlotShearforces(self,Element_forces: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the shear forces
+         '''
+         self.StructurePlotter.Plotshearforces(self.elements, Element_forces, scale=scale)
+    
+    def PlotShearstresses(self,Element_stresses: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the shear forces
+         '''
+         self.StructurePlotter.Plotshearstresses(self.elements, Element_stresses, scale=scale)
+    def PlotAxialstresses(self,Element_stresses: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the shear forces
+         '''
+         self.StructurePlotter.Plotaxialstresses(self.elements, Element_stresses, scale=scale)
+    
+    def PlotBendingstresses(self,Element_stresses: dict, scale: float = 1.0) -> None:
+         '''
+         Plots the shear forces
+         '''
+         self.StructurePlotter.Plotbendingstresses(self.elements, Element_stresses, scale=scale)
 
 # %% Testing area
     def get_dofs_elements(self):

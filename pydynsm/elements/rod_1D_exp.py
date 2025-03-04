@@ -37,10 +37,10 @@ class Rod1D(StructuralElement):
         # Initialise local rod element with necessary parameters
         self.rho = rho
         self.A = A
-        self.E = E
+        self.ksi = ksi if ksi is not None else 0.01
+        self.E = E * (1+2j*self.ksi)
         self.L = L
         # assisgn ksi if given otherwise assign a default value
-        self.ksi = ksi if ksi is not None else 0.01
         
         # set q standard to 0
         self.q = np.zeros(len(dofs))
@@ -147,6 +147,50 @@ class Rod1D(StructuralElement):
         u = self.displacement(x, omega, C)
 
         return [u]
+    def LocalElementForces(self, u_nodes_local, omega, num_points):
+        """
+        Calcualte the local displacements u(s).
+
+        Input:
+            u_nodes_global: array. The nodes in global coordinates
+            omega:          array. Range of frequencies of analysis
+            num_points:     value. Number of points to divide the element in.
+        Output:
+            u: array. Amplitude of vertical displacement
+        """
+        # get local axis to evaluate on
+        L = self.L
+        x = np.linspace(0.0, L, num_points)
+
+        # calculate coeficients
+        C = self.Coefficients(u_nodes_local, omega)
+
+        # get displacement
+        N = self.axialforce(x, omega, C)
+
+        return [N]
+    def LocalElementStresses(self, u_nodes_local, omega, num_points):
+        """
+        Calcualte the local displacements u(s).
+
+        Input:
+            u_nodes_global: array. The nodes in global coordinates
+            omega:          array. Range of frequencies of analysis
+            num_points:     value. Number of points to divide the element in.
+        Output:
+            u: array. Amplitude of vertical displacement
+        """
+        # get local axis to evaluate on
+        L = self.L
+        x = np.linspace(0.0, L, num_points)
+
+        # calculate coeficients
+        C = self.Coefficients(u_nodes_local, omega)
+
+        # get displacement
+        sigma = self.axialstress(x, omega, C)
+
+        return [sigma]
 
     def Coefficients(self, u_nodes_local, omega):
         """
@@ -213,3 +257,78 @@ class Rod1D(StructuralElement):
         u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x) + u_load
 
         return u
+    
+    def axialforce(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the transverse displacments of the 1D rod.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            u: array. horizontal displacements
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        
+        # read all the variables
+        # rho = self.rho
+        E = self.E
+        A = self.A
+        
+        # get the wavenumbers
+        alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
+
+        # check if C is input
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+            
+        # get distributed load value
+        # q = self.q[0]
+            
+        # displacements
+        # u_load = np.array([-q/(rho*A*omega**2)])
+        # u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x) + u_load
+        dudx = C[0]*np.exp(-1j*alpha_1*x)*(-1j*alpha_1)+C[1]*np.exp(-1j*alpha_2*x)*(-1j*alpha_2)
+        axialforce = E*A*dudx
+
+        return axialforce
+    
+    def axialstress(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the transverse displacments of the 1D rod.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            u: array. horizontal displacements
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        
+        # read all the variables
+        # rho = self.rho
+        E = self.E
+        
+        # get the wavenumbers
+        alpha_1, alpha_2 = self.ElementWaveNumbers(omega)
+
+        # check if C is input
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+            
+        # get distributed load value
+        # q = self.q[0]
+            
+        # displacements
+        # u_load = np.array([-q/(rho*A*omega**2)])
+        # u = C[0]*np.exp(-1j*alpha_1*x) + C[1]*np.exp(-1j*alpha_2*x) + u_load
+        dudx = C[0]*np.exp(-1j*alpha_1*x)*(-1j*alpha_1)+C[1]*np.exp(-1j*alpha_2*x)*(-1j*alpha_2)
+        axialstress = E*dudx
+
+        return axialstress

@@ -262,7 +262,6 @@ class Analysis:
         
         # Apply L matrix to get displacements of redundant nodes as well
         u_nodes_global_all = self.L @ u_nodes_global
-        
         # Get the current order
         current_order = self.unique_dofs + self.redundant_dofs
         
@@ -289,7 +288,7 @@ class Analysis:
             element_displacements[element.id] = u_elem
     
         return element_displacements
-
+    
     def SolveEigenvector(self, nodes, elements, omega, fixed_index=0):
             """
             Computes an eigenvector for the system using the constrained global stiffness matrix.
@@ -333,6 +332,56 @@ class Analysis:
             except np.linalg.LinAlgError:
                 raise ValueError("Numerical issue: unable to solve for eigenvector.")
     
+    def ElementForces(self, elements, u_nodes_global, omega, num_points=20):
+        """
+        Gathers the displacements for each element from the element-level calculations.
+    
+        Parameters
+        ----------
+        elements : list of Element
+            List of elements in the structural system.
+        u_nodes_global : numpy.ndarray
+            Global displacements of nodes.
+        omega : float
+            Frequency parameter.
+        num_points : int, optional
+            Number of points along the element to calculate displacements, default is 20.
+    
+        Returns
+        -------
+        element_forces : dict
+            Dictionary with element IDs as keys and their global displacements (as numpy arrays) as values.
+        """
+        
+        # Apply L matrix to get displacements of redundant nodes as well
+        u_nodes_global_all = self.L @ u_nodes_global
+        # Get the current order
+        current_order = self.unique_dofs + self.redundant_dofs
+        
+        # Create an index map to reorder the elements to match sorted_order
+        sorted_order = sorted(current_order)
+        index_map = [current_order.index(idx) for idx in sorted_order]
+        
+        # Reorder u_nodes_global_all using the index map
+        u_nodes_global_all_sorted = np.array(u_nodes_global_all)[index_map]
+        
+        element_forces = {}
+    
+        for element in elements:
+            # Retrieve global nodal DOF indices for the current element
+            global_dof_indices = element.get_node_dof_indices_global()
+    
+            # Extract the relevant global displacements for this element
+            u_element_global = u_nodes_global_all_sorted[global_dof_indices]
+    
+            # Calculate the displacements for the element using its Displacements method
+            f_elem = element.Forces(u_element_global, omega, num_points)
+    
+            # Store the displacements in the dictionary using the element's ID
+            element_forces[element.id] = f_elem
+    
+        return element_forces
+    
             # Reconstruct the full eigenvector
             U = np.zeros(num_dofs, dtype=complex)
             U[fixed_index] = 1  # Set fixed value
@@ -341,6 +390,55 @@ class Analysis:
             return U
     
 
+    def ElementStresses(self, elements, u_nodes_global, omega, num_points=20):
+        """
+        Gathers the stresses for each element from the element-level calculations.
+    
+        Parameters
+        ----------
+        elements : list of Element
+            List of elements in the structural system.
+        u_nodes_global : numpy.ndarray
+            Global displacements of nodes.
+        omega : float
+            Frequency parameter.
+        num_points : int, optional
+            Number of points along the element to calculate displacements, default is 20.
+    
+        Returns
+        -------
+        element_stresses : dict
+            Dictionary with element IDs as keys and their global displacements (as numpy arrays) as values.
+        """
+        
+        # Apply L matrix to get displacements of redundant nodes as well
+        u_nodes_global_all = self.L @ u_nodes_global
+        # Get the current order
+        current_order = self.unique_dofs + self.redundant_dofs
+        
+        # Create an index map to reorder the elements to match sorted_order
+        sorted_order = sorted(current_order)
+        index_map = [current_order.index(idx) for idx in sorted_order]
+        
+        # Reorder u_nodes_global_all using the index map
+        u_nodes_global_all_sorted = np.array(u_nodes_global_all)[index_map]
+        
+        element_stresses = {}
+    
+        for element in elements:
+            # Retrieve global nodal DOF indices for the current element
+            global_dof_indices = element.get_node_dof_indices_global()
+    
+            # Extract the relevant global displacements for this element
+            u_element_global = u_nodes_global_all_sorted[global_dof_indices]
+    
+            # Calculate the displacements for the element using its Displacements method
+            s_elem = element.Stresses(u_element_global, omega, num_points)
+    
+            # Store the displacements in the dictionary using the element's ID
+            element_stresses[element.id] = s_elem
+    
+        return element_stresses
 # %% specific methods for this method of analysis
 
     def find_unique_redundant_dofs(self, B):
@@ -703,7 +801,3 @@ class Analysis:
                             constrained_dofs[new_index] = dof_value
     
         return np.array(free_dofs), constrained_dofs
-
-                    
-                    
-                    
