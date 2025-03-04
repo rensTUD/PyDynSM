@@ -331,6 +331,13 @@ class Analysis:
                 U_r = -np.linalg.solve(K_rr, K_rp).flatten()  # Solve for U_r
             except np.linalg.LinAlgError:
                 raise ValueError("Numerical issue: unable to solve for eigenvector.")
+                
+            # Reconstruct the full eigenvector
+            U = np.zeros(num_dofs, dtype=complex)
+            U[fixed_index] = 1  # Set fixed value
+            U[free_dofs] = U_r  # Assign solved components
+    
+            return U                
     
     def ElementForces(self, elements, u_nodes_global, omega, num_points=20):
         """
@@ -382,12 +389,7 @@ class Analysis:
     
         return element_forces
     
-            # Reconstruct the full eigenvector
-            U = np.zeros(num_dofs, dtype=complex)
-            U[fixed_index] = 1  # Set fixed value
-            U[free_dofs] = U_r  # Assign solved components
-    
-            return U
+
     
 
     def ElementStresses(self, elements, u_nodes_global, omega, num_points=20):
