@@ -103,10 +103,10 @@ class EulerBernoulliBeam(StructuralElement):
             Ib = self.Ib
             # Copy-paste from Maple document of Wavenumbers
             # 4th-order derivative in x, so 4 wavenumbers
-            alpha_1 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
-            alpha_2 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
-            alpha_3 = -1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
-            alpha_4 = -1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)/1j
+            alpha_1 = 1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
+            alpha_2 = 1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
+            alpha_3 = -1/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
+            alpha_4 = -1j/E/Ib*(A*omega**2*rho*E**3*Ib**3)**(1/4)
     
             return alpha_1, alpha_2, alpha_3, alpha_4
 
