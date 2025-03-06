@@ -21,7 +21,7 @@ Assembler = PDM.Assembler
 
 # %%% Initialise an assembler with your project name
 
-s1 = Assembler('beam',analysis_type='new')
+s1 = Assembler('beam')
 
 # %%% Parameters
 E = 210e9
