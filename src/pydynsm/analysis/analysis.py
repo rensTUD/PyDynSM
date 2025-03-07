@@ -326,7 +326,7 @@ class Analysis:
     
         for element in elements:
             # Retrieve global nodal DOF indices for the current element
-            global_dof_indices = element.get_node_dof_indices_global()
+            global_dof_indices = element.get_element_node_dof_indices_global()
     
             # Extract the relevant global displacements for this element
             u_element_global = u_nodes_global_all_sorted[global_dof_indices]
@@ -376,7 +376,7 @@ class Analysis:
     
         for element in elements:
             # Retrieve global nodal DOF indices for the current element
-            global_dof_indices = element.get_node_dof_indices_global()
+            global_dof_indices = element.get_element_node_dof_indices_global()
     
             # Extract the relevant global displacements for this element
             u_element_global = u_nodes_global_all_sorted[global_dof_indices]
@@ -426,7 +426,7 @@ class Analysis:
     
         for element in elements:
             # Retrieve global nodal DOF indices for the current element
-            global_dof_indices = element.get_node_dof_indices_global()
+            global_dof_indices = element.get_element_node_dof_indices_global()
     
             # Extract the relevant global displacements for this element
             u_element_global = u_nodes_global_all_sorted[global_dof_indices]

@@ -58,7 +58,7 @@ for pair in beam_node_pairs:
 
 # %% constraint nodes
 node1.fix_node('z')
-node2.fix_node('z')
+# node2.fix_node('z')
 node3.fix_node('z')
 
 # beams[0].free_dof(node2, 'phi_y')
