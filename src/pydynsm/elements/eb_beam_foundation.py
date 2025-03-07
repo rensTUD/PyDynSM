@@ -16,7 +16,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
     """Class for Euler-Bernoulli beam element over viscoelastic foundation."""
 
 
-    def __init__(self, rho, A, E, Ib, L, kd, cd, ksi=None):
+    def __init__(self, rho, A, E, Ib, Wb, L, kd, cd, ksi=None):
         """
         Initialise EB beam over viscoelastic foundation.
 
@@ -38,6 +38,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
         self.rho = rho
         self.A = A
         self.Ib = Ib
+        self.Wb = Wb
         self.L = L
         self.kd = kd
         self.cd = cd
@@ -164,6 +165,57 @@ class EulerBernoulliBeamFoundation(StructuralElement):
 
         return [w, phi]
 
+    def LocalElementForces(self,u_nodes_local,omega,num_points):
+        """
+        Calculate local Element shear force V(s) and moment M(s).
+
+        Input:
+            u_nodes_global: array. The nodes in global coordinates
+            omega: array. Range of frequencies of analysis
+            num_points: value. Number of points to divide the element in.
+        Output:
+            V: array. Amplitude of elemental shear force
+            M: array. Amplitude of elemental bending moment
+        """
+        # get local axis to evaluate on
+        L = self.L
+        x = np.linspace(0.0, L, num_points)
+        
+        # calculate coeficients
+        C = self.Coefficients(u_nodes_local, omega)
+        
+        # get shear force
+        V = self.shearforce(x, omega, C)
+        # get bending moment
+        M = self.moment(x, omega, C)
+        return [V, M]
+
+    def LocalElementStresses(self,u_nodes_local,omega,num_points):
+        """
+        Calculate local Element shear force V(s) and moment M(s).
+
+        Input:
+            u_nodes_global: array. The nodes in global coordinates
+            omega: array. Range of frequencies of analysis
+            num_points: value. Number of points to divide the element in.
+        Output:
+            V: array. Amplitude of elemental shear force
+            M: array. Amplitude of elemental bending moment
+        """
+        # get local axis to evaluate on
+        L = self.L
+        x = np.linspace(0.0, L, num_points)
+        
+        # calculate coeficients
+        C = self.Coefficients(u_nodes_local, omega)
+        
+        # get shear force
+        tau = self.shearstress(x, omega, C)
+        # get bending moment
+        sigma_yy = self.bendingstress(x, omega, C)
+        
+        return [tau, sigma_yy]
+
     def Coefficients(self, u_node_local, omega):
         """
         Calculate the coefficients of the general solution, in this case 4.
@@ -263,4 +315,168 @@ class EulerBernoulliBeamFoundation(StructuralElement):
 
         return -phi
     
+    def moment(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the moment field of the EB beam.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            mmt: array. moment field of the given element
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
+        E = self.E
+        I = self.Ib
+        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+        
+        dudx2 = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
+                (-1j*alpha_2)**2*C[1]*np.exp(-1j*alpha_2*x) +
+                (-1j*alpha_3)**2*C[2]*np.exp(-1j*alpha_3*x) +
+                (-1j*alpha_4)**2*C[3]*np.exp(-1j*alpha_4*x))
+        
+        mmt = -E*I*dudx2
+        return mmt    
+
+    def shearforce(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the shear force field of the EB beam.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            sf: array. moment field of the given element
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
+        E = self.E
+        I = self.Ib
+        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+            
+        dudx3 = ((-1j*alpha_1)**3*C[0]*np.exp(-1j*alpha_1*x) +
+                (-1j*alpha_2)**3*C[1]*np.exp(-1j*alpha_2*x) +
+                (-1j*alpha_3)**3*C[2]*np.exp(-1j*alpha_3*x) +
+                (-1j*alpha_4)**3*C[3]*np.exp(-1j*alpha_4*x))
+        
+        sf = -E*I*dudx3
+        return sf
     
+    def bendingstress(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the moment field of the EB beam.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            mmt: array. moment field of the given element
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
+        E = self.E
+        I = self.Ib
+        W = self.Wb
+        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+        
+        kappa = ((-1j*alpha_1)**2*C[0]*np.exp(-1j*alpha_1*x) +
+                (-1j*alpha_2)**2*C[1]*np.exp(-1j*alpha_2*x) +
+                (-1j*alpha_3)**2*C[2]*np.exp(-1j*alpha_3*x) +
+                (-1j*alpha_4)**2*C[3]*np.exp(-1j*alpha_4*x))
+        
+        bs = -E*I*kappa/W
+        return bs
+    
+    def shearforce(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the shear force field of the EB beam.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            sf: array. moment field of the given element
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
+        E = self.E
+        I = self.Ib
+        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+            
+        dudx3 = ((-1j*alpha_1)**3*C[0]*np.exp(-1j*alpha_1*x) +
+                (-1j*alpha_2)**3*C[1]*np.exp(-1j*alpha_2*x) +
+                (-1j*alpha_3)**3*C[2]*np.exp(-1j*alpha_3*x) +
+                (-1j*alpha_4)**3*C[3]*np.exp(-1j*alpha_4*x))
+        
+        sf = -E*I*dudx3
+        return sf
+    
+    def shearstress(self, x, omega, C=None, u_node_local=None):
+        """
+        Get the shear force field of the EB beam.
+
+        Input:
+            x: array. Points along element
+            omega: array. Range of frequencies of analysis
+            C: array. Values of coefficients of general solution
+            u_node_local: local nodes
+        Ouput:
+            sf: array. moment field of the given element
+        Note:
+            if C is not given, then calculate it based on u_node_local.
+        """
+        # Read all the variables
+        rho = self.rho
+        A = self.A
+        L = self.L
+        E = self.E
+        I = self.Ib
+        alpha_1, alpha_2, alpha_3, alpha_4 = self.ElementWaveNumbers(omega)
+        
+        if C is None:
+            C = self.Coefficients(u_node_local, omega)
+            
+        dudx3 = ((-1j*alpha_1)**3*C[0]*np.exp(-1j*alpha_1*x) +
+                (-1j*alpha_2)**3*C[1]*np.exp(-1j*alpha_2*x) +
+                (-1j*alpha_3)**3*C[2]*np.exp(-1j*alpha_3*x) +
+                (-1j*alpha_4)**3*C[3]*np.exp(-1j*alpha_4*x))
+        
+        ss = -E*I*dudx3/self.A
+        return ss

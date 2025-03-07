@@ -122,7 +122,10 @@ node3.fix_node('x','z')
 
 
 beams[0].decouple_dof(node1, 'phi_y')
+beams[0].free_dof(node1,'phi_y')
 beams[1].decouple_dof(node1, 'phi_y')
+beams[1].free_dof(node1,'phi_y')
+
 
 
 # %% assign sections
@@ -145,7 +148,7 @@ beams[0].SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib':
 beams[0].SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
 
 # set second element to EB
-beams[1].SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib})
+beams[1].SetSection('EulerBernoulli Beam with foundation', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib, 'kd': 1e8, 'cd': 0})
 
 # set third element to rod
 beams[2].SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
