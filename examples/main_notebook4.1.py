@@ -42,7 +42,7 @@ Omega = 2 * np.pi * f
 P_0 = 70
 Q_1 = 5
 Assembler = PDM.Assembler
-s1 = Assembler('Frame',analysis_type='new')
+s1 = Assembler('Frame')
 
 def BVP(ww):
     return s1.GlobalConstrainedStiffness(ww)
@@ -63,8 +63,8 @@ def find_eigen_frequencies(omega):
 
 def remove_close_roots(roots, tol=1e-6):
     """ Remove repetitive roots found by the eigen-solver """
-    roots = np.sort(roots)  # 先排序，方便處理
-    filtered_roots = [roots[0]]  # 保留第一個 root
+    roots = np.sort(roots)
+    filtered_roots = [roots[0]]
 
     for i in range(1, len(roots)):
         if not np.isclose(roots[i], filtered_roots[-1], atol=tol):

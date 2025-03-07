@@ -125,12 +125,9 @@ Fc_global = s1.GlobalConstrainedForce(omega)
 f = np.linspace(0.001, 10000, 100)
 omega = 2 * np.pi * f
 
-for Omega in omega:
-    k = np.linalg.det(K(Omega)) 
-
 # # %%% Solve for the free DOFs
 
-# u_free = s1.SolveUfree(Kc_global, Fc_global)
+u_free = s1.SolveUfree(Kc_global, Fc_global)
 
 # # %%% Solve for the support reactions
 

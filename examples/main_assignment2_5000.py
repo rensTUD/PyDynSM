@@ -16,7 +16,7 @@ import pydynsm as PDM
 
 Assembler = PDM.Assembler
 
-s1 = Assembler('bridge',analysis_type='new')
+s1 = Assembler('bridge')
 # %% inputs
 l1 = 8
 l2 = 22

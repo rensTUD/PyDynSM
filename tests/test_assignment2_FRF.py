@@ -16,7 +16,7 @@ import pydynsm as PDM
 import scipy.integrate as spi
 Assembler = PDM.Assembler
 
-s1 = Assembler('bridge',analysis_type='new')
+s1 = Assembler('bridge')
 # %% inputs
 l1 = 4
 l2 = 10
