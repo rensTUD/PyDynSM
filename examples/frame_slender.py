@@ -41,7 +41,7 @@ P_0 = 70
 Q_1 = 5
 
 Assembler = PDM.Assembler
-s1 = Assembler('Frame', analysis_type='new')
+s1 = Assembler('Frame')
 
 # %%% Initialise an assembler with your project name
 nodes = []

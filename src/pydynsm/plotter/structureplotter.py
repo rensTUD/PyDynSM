@@ -14,6 +14,7 @@ class StructurePlotter:
     def __init__(self):
         pass
     
+    # %% PLOT STRUCTURE GLOBAL
     def PlotNodes(self, nodes):
         plt.figure(figsize=(10, 6))
         for node in nodes:
@@ -31,7 +32,8 @@ class StructurePlotter:
             mid_x = sum(x_values) / 2
             mid_z = sum(z_values) / 2
             plt.text(mid_x, mid_z+0.02, element.id, fontsize=9, color='black')
-            
+    
+    # %% PLOT RESULTS GLOBAL
     def PlotDisplacements(self, elements, displacements, scale=1.0):
         """
         Plots the displaced shape of the structure based on the provided displacements.
@@ -52,7 +54,6 @@ class StructurePlotter:
         plt.xlabel('X Coordinate')
         plt.ylabel('Z Coordinate')
         plt.grid(True)
-        plt.axis('equal')
 
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -127,7 +128,7 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Bending moments plot')
-        plt.axis('off')
+        plt.grid(True)
 
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -194,7 +195,7 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Axial Force Plot')
-        plt.axis('off')
+        plt.grid(True)
   
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -261,7 +262,7 @@ class StructurePlotter:
         
         plt.figure(figsize=(10, 8))
         plt.title('Shear Force Plot')
-        plt.axis('off')
+        plt.grid(True)
   
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -325,7 +326,7 @@ class StructurePlotter:
      
         plt.figure(figsize=(10, 8))
         plt.title('Shear Stress Plot')
-        plt.axis('off')
+        plt.grid(True)
     
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -389,7 +390,7 @@ class StructurePlotter:
      
         plt.figure(figsize=(10, 8))
         plt.title('Axial Stress Plot')
-        plt.axis('off')
+        plt.grid(True)
     
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -456,7 +457,6 @@ class StructurePlotter:
         plt.xlabel('X Coordinate')
         plt.ylabel('Z Coordinate')
         plt.grid(True)
-        plt.axis('equal')
     
         # Plot the original structure (nodes and elements)
         for node in [node for element in elements for node in element.nodes]:
@@ -515,7 +515,219 @@ class StructurePlotter:
         # Add legend and show the plot
         plt.legend()
         plt.show()
+    
+    # %% PLOT RESULTS LOCAL 
+    def plot_element_moment(self, element, forces):
+        """Plots the bending moment for a single element."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Bending Moments for Element {element.id}')
+        plt.grid(True)
 
+        # Extract the original coordinates of the nodes
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0
+
+        # Get moment components
+        f_elem = forces[element.id]
+        m_real = np.real(f_elem[-1, :])
+        m_imag = np.imag(f_elem[-1, :])
+
+        num_points = len(m_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = z0 + (z1 - z0) * s
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = -dz / length, dx / length
+
+        moment_x = x + m_real * perp_x
+        moment_z = z + m_real * perp_z
+        moment_x_imag = x + m_imag * perp_x
+        moment_z_imag = z + m_imag * perp_z
+
+        plt.plot(moment_x, moment_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(moment_x_imag, moment_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+
+    def plot_element_axial_force(self, element, forces):
+        """Plots the axial force for a single element."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Axial Force for Element {element.id}')
+        plt.grid(True)
+
+        # Extract coordinates
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0
+
+        # Get axial force components
+        f_elem = forces[element.id]
+        N_real = np.real(f_elem[0, :])
+        N_imag = np.imag(f_elem[0, :])
+
+        num_points = len(N_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = z0 + (z1 - z0) * s
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = dz / length, dx / length
+
+        axial_x = x + N_real * perp_x
+        axial_z = z - N_real * perp_z
+        axial_x_imag = x + N_imag * perp_x
+        axial_z_imag = z - N_imag * perp_z
+
+        plt.plot(axial_x, axial_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(axial_x_imag, axial_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+
+    def plot_element_shear_force(self, element, forces):
+        """Plots the shear force for a single element."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Shear Force for Element {element.id}')
+        plt.grid(True)
+
+        # Extract coordinates
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0
+
+        # Get shear force components
+        f_elem = forces[element.id]
+        V_real = np.real(f_elem[1, :])
+        V_imag = np.imag(f_elem[1, :])
+
+        num_points = len(V_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = z0 + (z1 - z0) * s
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = dz / length, dx / length
+
+        shear_x = x - V_real * perp_x
+        shear_z = z + V_real * perp_z
+        shear_x_imag = x - V_imag * perp_x
+        shear_z_imag = z + V_imag * perp_z
+
+        plt.plot(shear_x, shear_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(shear_x_imag, shear_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+
+    def plot_element_shear_stress(self, element, stresses):
+        """Plots the shear stress for a single element in local coordinates."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Shear Stress for Element {element.id}')
+        plt.grid(True)
+
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0  # Local coordinate system
+
+        sigma_elem = stresses[element.id]
+        tau_real = np.real(sigma_elem[1, :])
+        tau_imag = np.imag(sigma_elem[1, :])
+
+        num_points = len(tau_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = np.zeros_like(x)  # Element lies along the x-axis in local coordinates
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = dz / length, dx / length  # Perpendicular unit vector
+
+        shearstress_x = x - tau_real * perp_x
+        shearstress_z = z + tau_real * perp_z
+        shearstress_x_imag = x - tau_imag * perp_x
+        shearstress_z_imag = z + tau_imag * perp_z
+
+        plt.plot(shearstress_x, shearstress_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(shearstress_x_imag, shearstress_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+
+    def plot_element_axial_stress(self, element, stresses):
+        """Plots the axial stress for a single element in local coordinates."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Axial Stress for Element {element.id}')
+        plt.grid(True)
+
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0  # Local coordinate system
+
+        sigma_elem = stresses[element.id]
+        sigma_xx_real = np.real(sigma_elem[0, :])
+        sigma_xx_imag = np.imag(sigma_elem[0, :])
+
+        num_points = len(sigma_xx_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = np.zeros_like(x)  # Element lies along the x-axis in local coordinates
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = dz / length, dx / length  # Perpendicular unit vector
+
+        axialstress_x = x + sigma_xx_real * perp_x
+        axialstress_z = z - sigma_xx_real * perp_z
+        axialstress_x_imag = x + sigma_xx_imag * perp_x
+        axialstress_z_imag = z - sigma_xx_imag * perp_z
+
+        plt.plot(axialstress_x, axialstress_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(axialstress_x_imag, axialstress_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+
+    def plot_element_bending_stress(self, element, stresses):
+        """Plots the bending stress for a single element in local coordinates."""
+        plt.figure(figsize=(8, 6))
+        plt.title(f'Bending Stress for Element {element.id}')
+        plt.grid(True)
+
+        x0, z0 = 0, 0
+        x1, z1 = element.L, 0  # Local coordinate system
+
+        sigma_elem = stresses[element.id]
+        sigma_yy_real = np.real(sigma_elem[-1, :])
+        sigma_yy_imag = np.imag(sigma_elem[-1, :])
+
+        num_points = len(sigma_yy_real)
+        s = np.linspace(0, 1, num_points)
+
+        x = x0 + (x1 - x0) * s
+        z = np.zeros_like(x)  # Element lies along the x-axis in local coordinates
+
+        dx, dz = x1 - x0, z1 - z0
+        length = np.sqrt(dx**2 + dz**2)
+        perp_x, perp_z = dz / length, dx / length  # Perpendicular unit vector
+
+        bendingstress_x = x - sigma_yy_real * perp_x
+        bendingstress_z = z + sigma_yy_real * perp_z
+        bendingstress_x_imag = x - sigma_yy_imag * perp_x
+        bendingstress_z_imag = z + sigma_yy_imag * perp_z
+
+        plt.plot(bendingstress_x, bendingstress_z, 'b-', linewidth=1, label='Real Part')
+        plt.plot(bendingstress_x_imag, bendingstress_z_imag, 'g--', linewidth=1, label='Imaginary Part')
+
+        plt.legend()
+        plt.show()
+    
+    # %% 
     def ShowStructure(self, title='Structure Configuration'):
         plt.title(title)
         plt.xlabel('X Coordinate')

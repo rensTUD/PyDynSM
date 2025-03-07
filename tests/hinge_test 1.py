@@ -37,7 +37,6 @@ omega_f = 100
 # %%% nodes
 node1 = s1.CreateNode(0, 0, dof_config=['z', 'phi_y'])
 node2 = s1.CreateNode(l2, 0, dof_config=['z', 'phi_y'])
-# node3 = s1.CreateNode(1.8 * l2, 0)
 node3 = s1.CreateNode(2*l2, 0, dof_config=['z', 'phi_y'])
 
 # s1.PlotStructure()
@@ -97,7 +96,10 @@ u_free = s1.SolveUfree(Kc_global, Fc_global)
 u_elem = s1.FullDisplacement(u_free)
 disp = s1.ElementDisplacements(u_elem, omega_f, num_points=100)
 force = s1.ElementForces(u_elem, omega_f, num_points=200)
+stresses = s1.ElementStresses(u_elem, omega_f, num_points=200)
 s1.PlotMoments(force, scale=1e-3)
 # s1.PlotShearforces(force, scale=1e-3)
 s1.PlotElementDisplacements(disp, scale=1e05)
 # s1.PlotAxialforces(force, scale=1e-5)
+s1.StructurePlotter.plot_element_moment(beams[0], force)
+s1.StructurePlotter.plot_element_bending_stress(beams[0],stresses)

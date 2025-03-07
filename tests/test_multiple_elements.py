@@ -137,23 +137,7 @@ for Omega in omega:
 # f_supp = s1.SupportReactions(s1.GlobalStiffness(omega), u_free, s1.GlobalForce(omega))
 
 
-# # %%%%
-# print(f'Solution of u_free = \n{u_free}\n')
 
-# # %%%%
-# print(f'Global constrained stiffness matrix = \n{Kc_global}\n')
-
-# # %%%%
-
-# print(f'Global constrained force vector = \n{Fc_global}\n')
-
-# # %%%%
-
-# print(f'Global support reactions = \n{f_supp}\n')
-
-# # %%%
-# u_elem = s1.FullDisplacement(u_free)
-# print(f'u_elem = \n{u_elem}\n')
 
 # %%% get element displacements
 

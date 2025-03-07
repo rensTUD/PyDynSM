@@ -36,6 +36,7 @@ class EulerBernoulliBeam(StructuralElement):
         self.A = A
         # self.E = E # please see the line below for complex E value
         self.Ib = Ib
+        self.Wb = Wb
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01
