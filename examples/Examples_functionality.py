@@ -62,7 +62,7 @@ s1.PlotStructure()
 '''
 To create elements, we use the CreateElement method, which takes two nodes as input.
 
-In this example, we will 3 elements.
+In this example, we will create 3 elements.
 '''
 # beam
 beams = []
