@@ -50,11 +50,11 @@ class Analysis:
         k_ru = k_global[np.ix_(self.redundant_dofs,self.unique_dofs)]
         k_rr = k_global[np.ix_(self.redundant_dofs,self.redundant_dofs)]
         
-        k_global = np.block([[k_uu, k_ur],
+        k_global_ur = np.block([[k_uu, k_ur],
                                     [k_ru, k_rr]])
         
         # constrain by using L
-        K_global = self.L.T @ k_global @ self.L
+        K_global = self.L.T @ k_global_ur @ self.L
     
         return K_global
 
@@ -114,10 +114,10 @@ class Analysis:
         f_global_u = f_global[np.ix_(self.unique_dofs)]
         f_global_r = f_global[np.ix_(self.redundant_dofs)]
         
-        f_global = np.hstack((f_global_u,f_global_r))
+        f_global_ur = np.hstack((f_global_u,f_global_r))
         
         # constrain by using L
-        F_global = self.L.T @ f_global 
+        F_global = self.L.T @ f_global_ur 
         
         return F_global
 
@@ -187,7 +187,7 @@ class Analysis:
         u_free : numpy.ndarray
             Free displacements.
         """
-        return np.linalg.inv(Kc_global) @ fc_global
+        return np.linalg.solve(Kc_global, fc_global)
 
     def SupportReactions(self, k_global, u_free, f_global):
         """

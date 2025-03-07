@@ -256,7 +256,7 @@ class EulerBernoulliBeam(StructuralElement):
 
         # TODO - check for correctness
         u_load = np.array([-q_z/omega**2/rho/A, 0, -q_z/omega**2/rho/A, 0])
-        C = np.linalg.inv(A_mat) @ (u_nodes_local - u_load)
+        C = np.linalg.solve(A_mat,(u_nodes_local - u_load))
         # + np.array([1/(E*Ib*beta_b**4),0,1/(E*Ib*beta_b**4),0]) * q)
 
         return C

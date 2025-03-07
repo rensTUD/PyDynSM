@@ -35,10 +35,10 @@ Ic = 0.25 * np.pi * rc**4
 omega_f = 100
 
 # %%% nodes
-node1 = s1.CreateNode(0, 0)
-node2 = s1.CreateNode(l2, 0)
+node1 = s1.CreateNode(0, 0, dof_config=['z', 'phi_y'])
+node2 = s1.CreateNode(l2, 0, dof_config=['z', 'phi_y'])
 # node3 = s1.CreateNode(1.8 * l2, 0)
-node3 = s1.CreateNode(2*l2, 0)
+node3 = s1.CreateNode(2*l2, 0, dof_config=['z', 'phi_y'])
 
 # s1.PlotStructure()
 
@@ -57,9 +57,9 @@ for pair in beam_node_pairs:
     beams.append(beam)  # Append beam element to list
 
 # %% constraint nodes
-node1.fix_node('x', 'z', 'phi_y')
+node1.fix_node('z')
 node2.fix_node('z')
-node3.fix_node('z', 'phi_y')
+node3.fix_node('z')
 
 # beams[0].free_dof(node2, 'phi_y')
 beams[0].decouple_dof(node2, 'phi_y')
@@ -69,7 +69,7 @@ beams[1].decouple_dof(node2, 'phi_y')
 # %% assign sections
 for beam in beams:
     beam.SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib})
-    beam.SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
+    # beam.SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
 
 # s1.PlotStructure(plot_elements=True)
 
@@ -82,8 +82,8 @@ s1.run_connectivity()
 
 # %% Get the global stiffness and force matrices
 
-K_global = s1.GlobalStiffness(omega_f)
-F_global = s1.GlobalForce(omega_f)
+# K_global = s1.GlobalStiffness(omega_f)
+# F_global = s1.GlobalForce(omega_f)
 Kc_global = s1.GlobalConstrainedStiffness(omega_f)
 Fc_global = s1.GlobalConstrainedForce(omega_f)
 

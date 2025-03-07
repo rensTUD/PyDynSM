@@ -338,8 +338,8 @@ class Element:
             # pass through the loads that are specific for that element
             q_loc += self.FullDistributedLoad(element_type, q_evaluated, omega)[np.ix_(local_dof_indices)]
         
-        # TODO - check whether 
-        q_glob = self.R[np.ix_(local_dof_indices,local_dof_indices)] @ q_loc
+        # get global force vector
+        q_glob = self.R[np.ix_(local_dof_indices,local_dof_indices)].T @ q_loc
         
         return q_glob   
 

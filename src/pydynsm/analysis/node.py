@@ -47,9 +47,9 @@ class Node:
     
     # Node configurations are ordered as: 'Name': [['linear dofs'],['rotational dofs']]. Linear dofs also define the amount of coordinates we can assign (thus 2D or 3D basically)
     dof_configurations = {
-        '2D': [['x', 'z'],['phi_y']],
-        '3D': [['x', 'z', 'y'], ['phi_x', 'phi_z', 'phi_y']],
-        '2D_torsion': [['x', 'z'], ['phi_x', 'phi_y']] 
+        '2D': ['x', 'z','phi_y'],
+        '3D': ['x', 'z', 'y', 'phi_x', 'phi_z', 'phi_y'],
+        '2D_torsion': ['x', 'z', 'phi_x', 'phi_y'] 
         }
     
     def __init__(self,x,z,y=0,config='2D', dof_config=None):
@@ -78,9 +78,8 @@ class Node:
         self.dof_container = DOFContainer()
         
         # Set up DOFs based on configuration
-        for dof_list in self.dof_config:
-            for dof_name in dof_list:
-                self.dof_container.set_dof(dof_name)
+        for dof_name in self.dof_config:
+            self.dof_container.set_dof(dof_name)
                 
         # set the location in space
         self.x     = x
