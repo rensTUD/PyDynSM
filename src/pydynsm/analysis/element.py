@@ -201,21 +201,24 @@ class Element:
     
     def get_specific_dof_indices_global(self, dofs) -> list:
         """
-        Returns the list of indices for the specified DOFs that are actually present within the element.
+        Returns the indices of the specified DOFs within the element’s global displacement vector (u_nodes_global).
     
-        This method returns the indices for the specified DOFs that are defined for each node within
-        the element. For example, if one node has DOFs 'x' and 'z', and another has only 'x', and you
-        are querying for 'x', the returned indices will be those corresponding to 'x' for both nodes.
+        This method helps you extract specific DOFs (e.g., 'x', 'z') from the `u_nodes_global` vector in the order
+        they appear for this element.
     
-        Parameters
-        ----------
-        dofs : list of str
-            List of DOFs to find indices for (e.g., ['x', 'z']).
+        Example:
+        --------
+        Suppose the element has the following DOFs in order:
+            ['x', 'z', 'phi_y', 'x', 'z', 'phi_y']  # for node1 and node2
     
-        Returns
-        -------
-        specific_dof_indices : list of int
-            List of indices representing the specified DOFs that are currently defined in the element.
+        Then:
+            get_specific_dof_indices_global(['z']) → [1, 4]
+            get_specific_dof_indices_global(['x']) → [0, 3]
+            get_specific_dof_indices_global(['x', 'z']) → [0, 1, 3, 4]
+    
+        Use these indices to extract the corresponding displacements from `u_nodes_global`, like:
+            indices = get_specific_dof_indices_global(['z'])
+            uz = u_nodes_global[indices]
         """
         specific_dof_indices = []
         index_counter = 0
@@ -232,21 +235,24 @@ class Element:
     
     def get_specific_dof_indices_local(self, dofs) -> list:
         """
-        Returns the list of indices for the specified DOFs that are actually present within the element.
+        Returns the indices of the specified DOFs within the element’s global displacement vector (u_nodes_global).
     
-        This method returns the indices for the specified DOFs that are defined for each node within
-        the element. For example, if one node has DOFs 'x' and 'z', and another has only 'x', and you
-        are querying for 'x', the returned indices will be those corresponding to 'x' for both nodes.
+        This method helps you extract specific DOFs (e.g., 'x', 'z') from the `u_nodes_global` vector in the order
+        they appear for this element.
     
-        Parameters
-        ----------
-        dofs : list of str
-            List of DOFs to find indices for (e.g., ['x', 'z']).
+        Example:
+        --------
+        Suppose the element has the following DOFs in order:
+            ['x', 'z', 'phi_y', 'x', 'z', 'phi_y']  # for node1 and node2
     
-        Returns
-        -------
-        specific_dof_indices : list of int
-            List of indices representing the specified DOFs that are currently defined in the element.
+        Then:
+            get_specific_dof_indices_global(['z']) → [1, 4]
+            get_specific_dof_indices_global(['x']) → [0, 3]
+            get_specific_dof_indices_global(['x', 'z']) → [0, 1, 3, 4]
+    
+        Use these indices to extract the corresponding displacements from `u_nodes_global`, like:
+            indices = get_specific_dof_indices_global(['z'])
+            uz = u_nodes_global[indices]
         """
         specific_dof_indices = []
         index_counter = 0
@@ -676,49 +682,141 @@ class Element:
     
         Where:
             - u_x(s) = axial displacement 
-            - u_z(s) = transverse displacement
+            - u_z(s) = transverse displacement (interpolated if missing locally)
             - phi_y(s) = rotation about y axis
     
-        Input:
-            u_nodes_global: [u_x_left
-                             u_z_left
-                             phi_y_left
-                             u_x_right
-                             u_z_right
-                             phi_y_right]
+        Parameters
+        ----------
+        u_nodes_global : np.ndarray
+            Global nodal displacements of the element.
+        omega : float
+            Frequency (used by element types).
+        num_points : int, optional
+            Number of evaluation points along the element (default is 20).
         """
-        
-        # Get all element dof indices present based on dof mapping
+    
+        # Step 1 — Extract local/global DOF indices
         local_dof_indices = self.get_full_element_dof_indices_local()
         global_dof_indices = self.get_full_element_dof_indices_global()
-        Ndof = len(local_dof_indices)
+        Ndof = Element.maxNdof
     
-        # Convert the global nodal displacements to the local element coordinate system
+        # Step 2 — Project global nodal displacements into local frame
         u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
     
-        # Initialize empty list to hold displacements for each DOF at specified points
-        u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
+        # Step 3 — Initialize displacement array in local frame
+        u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Ndof)])
     
-        # Loop over all element types
-        for element_type_name, element_type in self.element_types.items():
-            # Get the DOFs of the element type in the context of the nodes
+        # Step 4 — Collect local DOFs that contribute via element_type
+        present_local_dofs = set()
+        for element_type in self.element_types.values():
+            present_local_dofs.update(element_type.dofs)
+    
+        # Step 5 — Accumulate displacements from element_types
+        for element_type in self.element_types.values():
             dofs = element_type.dofs
             specific_dof_indices = self.get_specific_dof_indices_local(dofs)
-    
-            # Calculate local displacements for the specific element type
             u_elem_contribution = element_type.LocalElementDisplacements(
                 u_local[np.ix_(specific_dof_indices)], omega, num_points
             )
-    
-            # Add the contribution of each element type to the full local element displacements
             for i, dof in enumerate(dofs):
                 global_dof_index = self.dof_mapping[dof]
                 if u_elem_contribution[i] is not None:
                     u_elem[global_dof_index] += u_elem_contribution[i]
     
-        u_global = self.R[:6,:6].T @ u_elem
+        # Step 6 — Determine expected DOFs from node configuration
+        node_left, node_right = self.nodes
+        node_dof_set = set(node_left.dof_container.dofs.keys()).union(set(node_right.dof_container.dofs.keys()))
+        expected_linear_dofs = [dof for dof in ['x', 'z', 'y'] if dof in node_dof_set]
+    
+        # Step 7 — Interpolate missing transverse DOFs (e.g., 'z')
+        if 'z' in expected_linear_dofs and 'z' not in present_local_dofs:
+            z_indices = self.get_specific_dof_indices_global(['z'])
+            if len(z_indices) == 2:
+                # get global displacements and transform to local
+                uz_local = self.R[np.ix_([1, 7],global_dof_indices)] @ u_nodes_global
+                uz_local_l = uz_local[0]
+                uz_local_r = uz_local[1]
+                
+                # linearly interpolate to ensure rigid body motion and rotation (no curvature!)
+                ξ = np.linspace(0, 1, num_points)
+                uz_interp = (1 - ξ) * uz_local_l + ξ * uz_local_r
+    
+                z_index = self.dof_mapping['z']
+                u_elem[z_index] += uz_interp
+    
+        # Step 8 — Axial consistency check: if 'x' DOF is missing but expected
+        if 'x' in expected_linear_dofs and 'x' not in present_local_dofs:
+            x_indices = self.get_specific_dof_indices_global(['x'])
+            if len(x_indices) == 2:
+                # get global displacements and transform to local
+                ux_local = self.R[np.ix_([0, 6],global_dof_indices)] @ u_nodes_global
+                ux_local_l = ux_local[0]
+                ux_local_r = ux_local[1]
+    
+                if not np.isclose(ux_local_l, ux_local_r, atol=1e-6):
+                    print(f"⚠️  Element {self.id}: x-displacements of nodes differ but element has no axial DOF — check model consistency.")
+    
+        # Step 9 — Transform displacements back to global frame
+        u_global = self.R[:6, :6].T @ u_elem
     
         return u_global
+
+
+
+    # def Displacements(self, u_nodes_global, omega, num_points=20):
+    #     """
+    #     Gets the displacements over the local axis of the element evaluated at num_points.
+    
+    #     Result is structured as (example in 2D config):
+    #         u_elem = [u_x(s)
+    #                   u_z(s)
+    #                   phi_y(s)]
+    
+    #     Where:
+    #         - u_x(s) = axial displacement 
+    #         - u_z(s) = transverse displacement
+    #         - phi_y(s) = rotation about y axis
+    
+    #     Input:
+    #         u_nodes_global: [u_x_left
+    #                          u_z_left
+    #                          phi_y_left
+    #                          u_x_right
+    #                          u_z_right
+    #                          phi_y_right]
+    #     """
+        
+    #     # Get all element dof indices present based on dof mapping
+    #     local_dof_indices = self.get_full_element_dof_indices_local()
+    #     global_dof_indices = self.get_full_element_dof_indices_global()
+    #     Ndof = len(local_dof_indices)
+    
+    #     # Convert the global nodal displacements to the local element coordinate system
+    #     u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
+    
+    #     # Initialize empty list to hold displacements for each DOF at specified points
+    #     u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
+    
+    #     # Loop over all element types
+    #     for element_type_name, element_type in self.element_types.items():
+    #         # Get the DOFs of the element type in the context of the nodes
+    #         dofs = element_type.dofs
+    #         specific_dof_indices = self.get_specific_dof_indices_local(dofs)
+    
+    #         # Calculate local displacements for the specific element type
+    #         u_elem_contribution = element_type.LocalElementDisplacements(
+    #             u_local[np.ix_(specific_dof_indices)], omega, num_points
+    #         )
+    
+    #         # Add the contribution of each element type to the full local element displacements
+    #         for i, dof in enumerate(dofs):
+    #             global_dof_index = self.dof_mapping[dof]
+    #             if u_elem_contribution[i] is not None:
+    #                 u_elem[global_dof_index] += u_elem_contribution[i]
+    
+    #     u_global = self.R[:6,:6].T @ u_elem
+    
+    #     return u_global
     
 # %% Element Forces
     def Forces(self, u_nodes_global, omega, num_points=20):

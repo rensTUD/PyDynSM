@@ -11,7 +11,7 @@ graft src
 prune examples
 prune tests
 prune notebooks
-.spyproject
+prune .spyproject
 
 # exclude files
 exclude .gitignore
