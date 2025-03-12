@@ -167,7 +167,7 @@ for beam in beams[:-1]:
     beam.SetSection('EulerBernoulli Beam', {'E': E, 'A':A_b, 'rho':rho, 'Ib':I_b, 'ksi':0, 'Wb':I_b})
     beam.SetSection('Rod', {'E': E, 'A':A_b, 'rho':rho,'ksi':0})
 
-beams[-1].SetSection('EulerBernoulli Beam with foundation', {'E': E, 'A':A_b, 'rho':rho, 'Ib':I_b, 'ksi':0, 'kd':k_d,'cd':c_d})
+beams[-1].SetSection('EulerBernoulli Beam with foundation', {'E': E, 'A':A_b, 'rho':rho, 'Ib':I_b, 'ksi':0, 'kd':k_d,'cd':c_d,'Wb':I_b})
 beams[-1].SetSection('Rod', {'E': E, 'A':A_b, 'rho':rho,'ksi':0})
 
 for cable in cables:
@@ -221,11 +221,23 @@ Gamma_beam_winkler = np.zeros((len(omega_m[:30]),1),complex)
 for ii, ww in enumerate(omega_m[:30]):
     for jj, bb in enumerate(beams):
         Gamma_beam[ii,jj] = (rho*A_b*np.trapz(disp_dict[ww][bb.id][0]**2,local_coor_beam[jj])+
-                                rho*A_b*np.trapz(disp_dict[ww][bb.id][1]**2,local_coor_beam[jj]))
+                             rho*A_b*np.trapz(disp_dict[ww][bb.id][1]**2,local_coor_beam[jj]))
     for kk, tt in enumerate(trusses):
-        Gamma_truss[ii,kk] = rho*A_t*np.trapz(disp_dict[ww][tt.id][0]**2,local_coor_truss[kk])
+        xl, zl, yl = tt.nodes[0].get_coords() # x, z and y of left node
+        xr, zr, yr = tt.nodes[1].get_coords() # x, z and y of left node
+        c = (xr-xl)/tt.L
+        s = (zr-zl)/tt.L
+        Gamma_truss[ii,kk] = rho*A_t*np.trapz((disp_dict[ww][tt.id][0]*c+disp_dict[ww][tt.id][1]*s)**2,local_coor_truss[kk])
+        # Gamma_truss[ii,kk] = (rho*A_t*np.trapz(disp_dict[ww][tt.id][0]**2,local_coor_truss[kk])+
+        #                      rho*A_t*np.trapz(disp_dict[ww][tt.id][1]**2,local_coor_truss[kk]))
     for ll, cc in enumerate(cables):
-        Gamma_cable[ii,ll] = rho*A_c*np.trapz(disp_dict[ww][cc.id][0]**2,local_coor_cable[ll])
+        xl, zl, yl = cc.nodes[0].get_coords() # x, z and y of left node
+        xr, zr, yr = cc.nodes[1].get_coords() # x, z and y of left node
+        c = (xr-xl)/cc.L
+        s = (zr-zl)/cc.L
+        Gamma_cable[ii,ll] = rho*A_c*np.trapz((disp_dict[ww][cc.id][0]*c+disp_dict[ww][cc.id][1]*s)**2,local_coor_cable[ll])
+        # Gamma_cable[ii,ll] = (rho*A_c*np.trapz(disp_dict[ww][cc.id][0]**2,local_coor_cable[ll])+
+        #                       rho*A_c*np.trapz(disp_dict[ww][cc.id][1]**2,local_coor_cable[ll]))
 Gamma = (np.sum(Gamma_beam,axis=1,keepdims=True)+
          np.sum(Gamma_truss,axis=1,keepdims=True)+
          np.sum(Gamma_cable,axis=1,keepdims=True))
@@ -244,12 +256,28 @@ Ortho_cable = np.zeros((N,N,len(cables)), dtype=complex)
 for ii, ww1 in enumerate(omega_m[:N]):
         for jj, ww2 in enumerate(omega_m[:N]):
             for kk, bb in enumerate(beams):
-             Ortho_beam[ii,jj,kk] = (rho*A_b*np.trapz(disp_norm[ww1][bb.id][0]*disp_norm[ww2][bb.id][0],local_coor_beam[kk])+
-                                     rho*A_b*np.trapz(disp_norm[ww1][bb.id][1]*disp_norm[ww2][bb.id][1],local_coor_beam[kk]))
+                Ortho_beam[ii,jj,kk] = (rho*A_b*np.trapz(disp_norm[ww1][bb.id][0]*disp_norm[ww2][bb.id][0],local_coor_beam[kk])
+                                        +rho*A_b*np.trapz(disp_norm[ww1][bb.id][1]*disp_norm[ww2][bb.id][1],local_coor_beam[kk]))
             for ll, cc in enumerate(cables):
-             Ortho_cable[ii,jj,ll] = (rho*A_c*np.trapz(disp_norm[ww1][cc.id][0]*disp_norm[ww2][cc.id][0],local_coor_cable[ll]))
+                xl, zl, yl = cc.nodes[0].get_coords() # x, z and y of left node
+                xr, zr, yr = cc.nodes[1].get_coords() # x, z and y of left node
+                c = (xr-xl)/cc.L
+                s = (zr-zl)/cc.L
+                Ortho_cable[ii,jj,ll] = rho*A_c*np.trapz((disp_norm[ww1][cc.id][0]*c+disp_norm[ww1][cc.id][1]*s)                       
+                                                         *(disp_norm[ww2][cc.id][0]*c+disp_norm[ww2][cc.id][1]*s),local_coor_cable[ll])
+             # Ortho_cable[ii,jj,ll] = (rho*A_c*np.trapz(disp_norm[ww1][cc.id][0]*disp_norm[ww2][cc.id][0],local_coor_cable[ll])
+             #                          +rho*A_c*np.trapz(disp_norm[ww1][cc.id][1]*disp_norm[ww2][cc.id][1],local_coor_cable[ll])
+             #                          )
             for mm, tt in enumerate(trusses):
-              Ortho_truss[ii,jj,mm] = (rho*A_t*np.trapz(disp_norm[ww1][tt.id][0]*disp_norm[ww2][tt.id][0],local_coor_truss[mm]))
+                xl, zl, yl = tt.nodes[0].get_coords() # x, z and y of left node
+                xr, zr, yr = tt.nodes[1].get_coords() # x, z and y of left node
+                c = (xr-xl)/tt.L
+                s = (zr-zl)/tt.L                
+                Ortho_truss[ii,jj,mm] = (rho*A_t*np.trapz((disp_norm[ww1][tt.id][0]*c+disp_norm[ww1][tt.id][1]*s)                       
+                                                         *(disp_norm[ww2][tt.id][0]*c+disp_norm[ww2][tt.id][1]*s)
+                    ,local_coor_truss[mm]))
+                # Ortho_truss[ii,jj,mm] = (rho*A_t*np.trapz(disp_norm[ww1][tt.id][0]*disp_norm[ww2][tt.id][0],local_coor_truss[mm])
+                #                        +rho*A_t*np.trapz(disp_norm[ww1][tt.id][1]*disp_norm[ww2][tt.id][1],local_coor_truss[mm]))
     
 Ortho = np.sum(Ortho_beam,axis=2)+ np.sum(Ortho_cable,axis=2)+ np.sum(Ortho_truss,axis=2)
 plt.figure()
