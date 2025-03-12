@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyDynSM"  
-version = "0.2.3"  # Increment this for each new release
+version = "0.2.4"  # Increment this for each new release
 authors = [
   { name = "Technical University Delft", email="r.j.vanleijden-1@tudelft.nl" }
 ]

@@ -300,7 +300,7 @@ class Element:
 
 # %% loads
 
-    def AddDistributedLoad(self,**loads) -> None:
+    def AddDistributedLoad(self, **loads) -> None:
         '''
         Adds distributed loads to the element.
     
@@ -309,13 +309,27 @@ class Element:
         **loads : dict
             Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude.
         '''
-        
-        # Assign unpacked loads to the element's list of loads
         for dof, load in loads.items():
-            if dof not in self.element_loads.keys():
-                self.element_loads[dof] = load
-            else:
-                print(f'Load already added for DOF {dof}')
+            if dof in self.element_loads:
+                print(f'Distributed load for DOF {dof} is already present and will be overwritten. '
+                      f'Old value: {self.element_loads[dof]}, New value: {load}')
+            self.element_loads[dof] = load
+            
+    def RemoveDistributedLoad(self, dof: str) -> None:
+        '''
+        Removes the distributed load for a specific degree of freedom (DOF) from the element.
+    
+        Parameters
+        ----------
+        dof : str
+            The degree of freedom (e.g., 'x', 'y', 'z', etc.) for which the distributed load should be removed.
+        '''
+        if dof in self.element_loads:
+            removed_load = self.element_loads.pop(dof)
+            print(f'Distributed load for DOF {dof} (value: {removed_load}) has been removed.')
+        else:
+            print(f'No distributed load found for DOF {dof}. Nothing was removed.')
+            
 
     def EvaluateDistributedLoad(self, element_loads, omega):
         '''

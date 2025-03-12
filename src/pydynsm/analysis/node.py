@@ -205,27 +205,39 @@ class Node:
             print(e)
             return
                 
-    def add_load(self,**loads):
+    def add_load(self, **loads):
         '''
         Adds distributed loads to the Node.
     
         Parameters
         ----------
         **loads : dict
-            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude. e.g. node.AddLoad(x=load_x, y=load_y
+            Keyword arguments where the key is the DOF (degree of freedom) and the value is the load magnitude. 
+            e.g. node.add_load(x=load_x, y=load_y)
         '''
-        
-        # Assign unpacked loads to the element's list of loads
         for dof, load in loads.items():
-            # check if dof is present
             if self.dof_container.has_dof(dof):
-                if dof not in self.nodal_loads.keys():
-                    self.nodal_loads[dof] = load
-                else:
-                    print(f'Load already added for DOF {dof}')  
+                if dof in self.nodal_loads:
+                    print(f'Load for DOF {dof} is already present and will be overwritten. Old value: {self.nodal_loads[dof]}, New value: {load}')
+                self.nodal_loads[dof] = load
             else:
-                print(f'Node {self.node_id} does not contain DOF {dof}. Load has not been added.')                    
-
+                print(f'Node {self.node_id} does not contain DOF {dof}. Load has not been added.')
+                
+    def remove_load(self, dof):
+        '''
+        Removes the applied load for a specific degree of freedom (DOF) from the node.
+    
+        Parameters
+        ----------
+        dof : str
+            The degree of freedom (e.g., 'x', 'y', 'z', 'phi_x', etc.) for which the load should be removed.
+        '''
+        if dof in self.nodal_loads:
+            removed_load = self.nodal_loads.pop(dof)
+            print(f'Load for DOF {dof} (value: {removed_load}) has been removed.')
+        else:
+            print(f'No load found for DOF {dof}. Nothing was removed.')
+                                   
     def get_coords(self):
         """
         Returns the coordinates of the node based on its DOF configuration.
