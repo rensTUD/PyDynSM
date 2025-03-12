@@ -147,6 +147,24 @@ class Assembler:
             Constrained global force vector.
         """
         return self.Analysis.GlobalConstrainedForce(self.nodes, self.elements, omega)
+    
+    def GlobalConstrainedSystem(self, omega):
+        """
+        Returns the constrained global stiffness matrix and force vector.
+    
+        Parameters
+        ----------
+        omega : float
+            Frequency parameter.
+    
+        Returns
+        -------
+        k_constrained : numpy.ndarray
+            Constrained global constrained stiffness matrix.
+        f_constrained : numpy.ndarray
+            Constrained global constrained force vector.
+        """
+        return self.Analysis.GlobalConstrainedSystem(self.nodes, self.elements, omega)
 
     def SolveUfree(self, Kc_global, fc_global):
         """

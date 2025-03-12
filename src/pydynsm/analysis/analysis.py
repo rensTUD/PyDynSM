@@ -170,7 +170,41 @@ class Analysis:
         F_free = f_global[self.free_dofs]
         
         return F_free - K_free_constrained @ constrained_values
-
+    
+    def GlobalConstrainedSystem(self, nodes, elements, omega):
+        """
+        Returns the constrained global stiffness matrix and force vector.
+    
+        Parameters
+        ----------
+        nodes : list of Node
+            List of nodes in the structural system.
+        elements : list of Element
+            List of elements in the structural system.
+        omega : float
+            Frequency parameter.
+    
+        Returns
+        -------
+        k_constrained : numpy.ndarray
+            Constrained global stiffness matrix.
+        f_constrained : numpy.ndarray
+            Constrained global force vector.
+        """
+        k_global = self.GlobalStiffness(nodes, elements, omega)
+        f_global = self.GlobalForce(nodes, elements, omega)
+    
+        constrained_indices = list(self.constrained_dofs.keys())
+        constrained_values = list(self.constrained_dofs.values())
+    
+        K_ff = k_global[np.ix_(self.free_dofs, self.free_dofs)]
+        K_fc = k_global[np.ix_(self.free_dofs, constrained_indices)]
+        F_f = f_global[self.free_dofs]
+    
+        F_constrained = F_f - K_fc @ constrained_values
+    
+        return K_ff, F_constrained
+    
     def SolveUfree(self, Kc_global, fc_global):
         """
         Solves the free displacements.
