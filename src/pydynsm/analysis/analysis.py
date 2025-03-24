@@ -323,7 +323,7 @@ class Analysis:
     
             return U   
 
-    def ElementDisplacements(self, elements, u_nodes_global, omega, num_points=20):
+    def ElementDisplacements(self, elements, u_nodes_global, omega, num_points=20, local_axes = False):
         """
         Gathers the displacements for each element from the element-level calculations.
     
@@ -366,7 +366,7 @@ class Analysis:
             u_element_global = u_nodes_global_all_sorted[global_dof_indices]
     
             # Calculate the displacements for the element using its Displacements method
-            u_elem = element.Displacements(u_element_global, omega, num_points)
+            u_elem = element.Displacements(u_element_global, omega, num_points, local_axes)
     
             # Store the displacements in the dictionary using the element's ID
             element_displacements[element.id] = u_elem

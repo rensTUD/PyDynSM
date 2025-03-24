@@ -220,12 +220,12 @@ class Assembler:
         """
         return self.Analysis.FullDisplacement(u_free)
     
-    def ElementDisplacements(self, u_full, omega, num_points=20):
+    def ElementDisplacements(self, u_full, omega, num_points=20, local_axes = False):
         '''
         Returns all element displacements
         '''
         
-        return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points)
+        return self.Analysis.ElementDisplacements(self.elements, u_full, omega, num_points, local_axes)
     def ElementForces(self, u_full, omega, num_points=20):
         '''
         Returns all element forces

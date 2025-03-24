@@ -685,7 +685,7 @@ class Element:
                     
 # %% Element Displacements
 
-    def Displacements(self, u_nodes_global, omega, num_points=20):
+    def Displacements(self, u_nodes_global, omega, num_points=20, local_axes = False):
         """
         Gets the displacements over the local axis of the element evaluated at num_points.
     
@@ -695,8 +695,8 @@ class Element:
                       phi_y(s)]
     
         Where:
-            - u_x(s) = axial displacement 
-            - u_z(s) = transverse displacement (interpolated if missing locally)
+            - u_x(s) = displacement in x
+            - u_z(s) = displacement in z
             - phi_y(s) = rotation about y axis
     
         Parameters
@@ -707,6 +707,8 @@ class Element:
             Frequency (used by element types).
         num_points : int, optional
             Number of evaluation points along the element (default is 20).
+        local_axes : bool, optional
+            Determines whether returned response is in global axes or local axes system
         """
     
         # Step 1 — Extract local/global DOF indices
@@ -769,68 +771,14 @@ class Element:
     
                 if not np.isclose(ux_local_l, ux_local_r, atol=1e-6):
                     print(f"⚠️  Element {self.id}: x-displacements of nodes differ but element has no axial DOF — check model consistency.")
-    
-        # Step 9 — Transform displacements back to global frame
-        u_global = self.R[:6, :6].T @ u_elem
-    
-        return u_global
-
-
-
-    # def Displacements(self, u_nodes_global, omega, num_points=20):
-    #     """
-    #     Gets the displacements over the local axis of the element evaluated at num_points.
-    
-    #     Result is structured as (example in 2D config):
-    #         u_elem = [u_x(s)
-    #                   u_z(s)
-    #                   phi_y(s)]
-    
-    #     Where:
-    #         - u_x(s) = axial displacement 
-    #         - u_z(s) = transverse displacement
-    #         - phi_y(s) = rotation about y axis
-    
-    #     Input:
-    #         u_nodes_global: [u_x_left
-    #                          u_z_left
-    #                          phi_y_left
-    #                          u_x_right
-    #                          u_z_right
-    #                          phi_y_right]
-    #     """
         
-    #     # Get all element dof indices present based on dof mapping
-    #     local_dof_indices = self.get_full_element_dof_indices_local()
-    #     global_dof_indices = self.get_full_element_dof_indices_global()
-    #     Ndof = len(local_dof_indices)
-    
-    #     # Convert the global nodal displacements to the local element coordinate system
-    #     u_local = self.R[np.ix_(local_dof_indices, global_dof_indices)] @ u_nodes_global
-    
-    #     # Initialize empty list to hold displacements for each DOF at specified points
-    #     u_elem = np.array([np.zeros(num_points, dtype=complex) for _ in range(Element.maxNdof)])
-    
-    #     # Loop over all element types
-    #     for element_type_name, element_type in self.element_types.items():
-    #         # Get the DOFs of the element type in the context of the nodes
-    #         dofs = element_type.dofs
-    #         specific_dof_indices = self.get_specific_dof_indices_local(dofs)
-    
-    #         # Calculate local displacements for the specific element type
-    #         u_elem_contribution = element_type.LocalElementDisplacements(
-    #             u_local[np.ix_(specific_dof_indices)], omega, num_points
-    #         )
-    
-    #         # Add the contribution of each element type to the full local element displacements
-    #         for i, dof in enumerate(dofs):
-    #             global_dof_index = self.dof_mapping[dof]
-    #             if u_elem_contribution[i] is not None:
-    #                 u_elem[global_dof_index] += u_elem_contribution[i]
-    
-    #     u_global = self.R[:6,:6].T @ u_elem
-    
-    #     return u_global
+        # Transform displacements back to global frame if asked for
+        if not local_axes:
+            u_global = self.R[:6, :6].T @ u_elem
+            return u_global
+        # Or return displacements in local coordinate frame
+        if local_axes:
+            return u_elem
     
 # %% Element Forces
     def Forces(self, u_nodes_global, omega, num_points=20):
