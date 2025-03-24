@@ -285,6 +285,7 @@ We can do the same for stresses:
 # plot global displacements
 u_elem = s1.FullDisplacement(u_free)
 displacements = s1.ElementDisplacements(u_elem, omega_f, num_points=100)
+local_displacements = s1.ElementDisplacements(u_elem, omega_f, local_axes=True)
 s1.PlotElementDisplacements(displacements, scale=1e05)
 
 # # plot GLOBAL forces
