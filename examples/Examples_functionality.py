@@ -195,6 +195,167 @@ You have to do this only once!
 
 s1.run_connectivity()
 
+# %%
+
+def get_unique_dof_indices_of_node(node_id, pydynsm_object):
+    """
+    Retrieves the unique DOF indices corresponding to a specific node across all elements.
+
+    Parameters
+    ----------
+    node_id : int
+        The ID of the node whose DOFs you want to retrieve.
+    elements : list of Element
+        List of all elements in the structural system.
+    unique_dofs : list
+        List of global unique DOF indices.
+    dof_indices : dict
+        Maps (node_id, element_id) to a dict of DOF names and their original DOF indices.
+
+    Returns
+    -------
+    node_unique_dof_indices : dict
+        Dictionary mapping DOF names (e.g., 'x', 'y', 'z', etc.) to their new unique index.
+    """
+    
+    elements = pydynsm_object.elements
+    unique_dofs = pydynsm_object.Analysis.unique_dofs
+    dof_indices = pydynsm_object.Analysis.dof_indices
+    
+    unique_dof_dict = {old_index: idx for idx, old_index in enumerate(unique_dofs)}
+    node_unique_dof_indices = {}
+
+    for element in elements:
+        if node_id in element.dof_containers:
+            element_id = element.id
+            if (node_id, element_id) in dof_indices:
+                for dof_name, old_index in dof_indices[(node_id, element_id)].items():
+                    new_index = unique_dof_dict.get(old_index)
+                    if new_index is not None:
+                        # Prefer the first occurrence if already in dictionary
+                        if dof_name not in node_unique_dof_indices:
+                            node_unique_dof_indices[dof_name] = new_index
+
+    return node_unique_dof_indices
+
+# def filter_free_dofs_for_node(node_dofs, pydynsm_object):
+#     """
+#     Filters the DOFs of a node to determine which are actually free.
+
+#     Parameters
+#     ----------
+#     node_dofs : dict
+#         Dictionary mapping DOF names (e.g., 'x', 'z', 'phi_y') to their unique DOF indices.
+#     free_dofs : numpy.ndarray
+#         Array of global unique DOF indices that are free.
+
+#     Returns
+#     -------
+#     node_free_dofs : dict
+#         Dictionary mapping DOF names to unique indices for DOFs that are free.
+#         DOFs not in free_dofs are excluded from the result.
+#     """
+#     free_dofs = pydynsm_object.Analysis.free_dofs
+#     free_dof_set = set(free_dofs)
+#     node_free_dofs = {}
+
+#     for dof_name, index in node_dofs.items():
+#         if index in free_dof_set:
+#             node_free_dofs[dof_name] = index
+#         # Optionally: include `else: node_free_dofs[dof_name] = None` if you want to return something for missing ones
+
+#     return node_free_dofs
+
+def get_free_dof_position_for_node(node_dofs, pydynsm_object):
+    """
+    Maps node DOF names to their position in the free_dofs array (not the unique DOF index itself).
+
+    Parameters
+    ----------
+    node_dofs : dict
+        Dictionary mapping DOF names (e.g., 'x', 'z', 'phi_y') to unique DOF indices.
+    free_dofs : numpy.ndarray
+        Array of global unique DOF indices that are free.
+
+    Returns
+    -------
+    node_free_dof_positions : dict
+        Dictionary mapping DOF names to their index (position) within the free_dofs array.
+        DOFs not in free_dofs are excluded from the result.
+    """
+    free_dofs = pydynsm_object.Analysis.free_dofs
+    free_dof_index_map = {dof_index: i for i, dof_index in enumerate(free_dofs)}
+    node_free_dof_positions = {}
+
+    for dof_name, dof_index in node_dofs.items():
+        if dof_index in free_dof_index_map:
+            node_free_dof_positions[dof_name] = free_dof_index_map[dof_index]
+
+    return node_free_dof_positions
+
+
+# get node dofs
+node_dofs = get_unique_dof_indices_of_node(node0.id, s1)
+print(node_dofs)
+# get index of free dofs
+free_dofs_for_node = get_free_dof_position_for_node(node_dofs, s1)
+print(free_dofs_for_node)
+
+# %%
+
+def get_node_free_dof_positions(node, pydynsm_object):
+    """
+    Retrieves the positions of the node's free DOFs in the global free_dofs array.
+
+    This function internally maps the node's DOF names (e.g., 'x', 'z', 'phi_y')
+    to their position within the global free DOFs array used in the analysis.
+
+    Parameters
+    ----------
+    node : object
+        The node object of the PyDynSM project that you want to check
+    pydynsm_object : object
+        The main PyDynSM project object that contains elements and Analysis data.
+
+    Returns
+    -------
+    node_free_dof_positions : dict
+        Dictionary mapping DOF names to their index (position) within the free_dofs array.
+        DOFs not in free_dofs are excluded from the result.
+    """
+    elements = pydynsm_object.elements
+    unique_dofs = pydynsm_object.Analysis.unique_dofs
+    dof_indices = pydynsm_object.Analysis.dof_indices
+    free_dofs = pydynsm_object.Analysis.free_dofs
+    node_id = node.id
+
+    unique_dof_dict = {old_index: idx for idx, old_index in enumerate(unique_dofs)}
+    node_unique_dof_indices = {}
+
+    # Step 1: Get unique DOF indices of the node
+    for element in elements:
+        if node_id in element.dof_containers:
+            element_id = element.id
+            if (node_id, element_id) in dof_indices:
+                for dof_name, old_index in dof_indices[(node_id, element_id)].items():
+                    new_index = unique_dof_dict.get(old_index)
+                    if new_index is not None and dof_name not in node_unique_dof_indices:
+                        node_unique_dof_indices[dof_name] = new_index
+
+    # Step 2: Map node DOFs to their position in free_dofs
+    free_dof_index_map = {dof_index: i for i, dof_index in enumerate(free_dofs)}
+    node_free_dof_positions = {}
+
+    for dof_name, dof_index in node_unique_dof_indices.items():
+        if dof_index in free_dof_index_map:
+            node_free_dof_positions[dof_name] = free_dof_index_map[dof_index]
+
+    return node_free_dof_positions
+
+free_positions = get_node_free_dof_positions(node0, s1)
+print(free_positions)
+
+
 # %% Get the global stiffness and force matrices
 '''
 To obtain the stiffness matrix and force vector, we run the following two methods:
