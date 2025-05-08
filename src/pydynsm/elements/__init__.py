@@ -21,8 +21,6 @@ from .rod_1D_foundation import Rod1D_foundation
 from .rb_rod import RayleighBishopRod
 from .rl_rod import RayleighLoveRod
 
-
-
 # Euler Bernoulli beam versions
 from .eb_beam_exp import EulerBernoulliBeam
 from .eb_beam_foundation import EulerBernoulliBeamFoundation
@@ -33,3 +31,6 @@ from .rayleigh_beam import RayleighBeam
 
 # Timoshenko beam
 # not ready yet, in the file is a Euler-Bernoulli beam
+
+# Shear Beam
+from .shear_beam_1D_exp import Shear1D

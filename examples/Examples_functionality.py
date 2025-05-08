@@ -144,8 +144,9 @@ To assign sections, we use the element.SetSection(element_type, parameters), whe
 
 '''
 # set first element to EB - rod
-beams[0].SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib})
+# beams[0].SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib})
 beams[0].SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
+beams[0].SetSection('Shear Beam', {'G': Ec, 'A': Ac, 'rho': rhoc})
 
 # set second element to EB
 beams[1].SetSection('EulerBernoulli Beam with foundation', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib, 'kd': 1e8, 'cd': 0})
