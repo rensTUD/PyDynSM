@@ -42,7 +42,7 @@ class EulerBernoulliBeam(StructuralElement):
         self.Ib = Ib
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
-        self.ksi = ksi if ksi is not None else 0.01
+        self.ksi = ksi if ksi is not None else 0
 
     def LocalStiffness(self, omega):
         """

@@ -25,6 +25,7 @@ from .rl_rod import RayleighLoveRod
 from .eb_beam_exp import EulerBernoulliBeam
 from .eb_beam_foundation import EulerBernoulliBeamFoundation
 from .eb_beam_tensioned import TensionedEulerBernoulliBeam
+from .eb_beam_foundation_end_attachment import EulerBernoulliBeamFoundationEndAttachment
 
 # Rayleigh beam
 from .rayleigh_beam import RayleighBeam

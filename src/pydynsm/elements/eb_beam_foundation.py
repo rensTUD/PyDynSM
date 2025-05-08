@@ -16,7 +16,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
     """Class for Euler-Bernoulli beam element over viscoelastic foundation."""
 
 
-    def __init__(self, rho, A, E, Ib, Wb, L, kd, cd, ksi=None):
+    def __init__(self, rho, A, E, Ib, Wb, L, kd, cd=0, ksi=None):
         """
         Initialise EB beam over viscoelastic foundation.
 
@@ -43,7 +43,7 @@ class EulerBernoulliBeamFoundation(StructuralElement):
         self.kd = kd
         self.cd = cd
         # Assign ksi if given,  otherwise assign a default value
-        self.ksi = ksi if ksi is not None else 0.01
+        self.ksi = ksi if ksi is not None else 0
         self.E = E*(1+2j*self.ksi)
         self.q = np.zeros(len(dofs))
         

@@ -240,9 +240,12 @@ class ElementFactory:
     @classmethod
     def ListElementTypes(cls):
         """
-        Return a list of currently registered element types.
+        Return a list of currently registered element types,
+        printed neatly in the terminal.
         """
-        return list(cls.elements.keys())
+        print("Available Element Types:")
+        for name in sorted(cls.elements.keys()):
+            print(f"  - {name}")
     
     @classmethod
     def ElementType(cls, name: str):#, required_parameters: list | None = None):

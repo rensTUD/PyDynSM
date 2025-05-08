@@ -12,6 +12,7 @@ Created on Tue Mar 12 19:21:45 2024
 
 from . import plotter
 from . import analysis
+from .elements import ElementFactory
 # %% main class definition
 
 class Assembler:
@@ -33,6 +34,7 @@ class Assembler:
         self.Node = analysis.Node
         self.Element = analysis.Element
         self.Analysis = analysis.Analysis()
+        self.ElementFactory = ElementFactory
             
         print(f"Assembler '{self.name}' successfully initialised")
 
@@ -70,6 +72,9 @@ class Assembler:
         if element_type:
             new_element.SetSection(element_type, props)
         return new_element     
+    
+    def ListElementTypes(self):
+        self.ElementFactory.ListElementTypes()
     
 # %% Plotting    
     def PlotStructure(self, plot_elements=False):

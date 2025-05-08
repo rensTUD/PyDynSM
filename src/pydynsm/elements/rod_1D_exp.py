@@ -37,7 +37,7 @@ class Rod1D(StructuralElement):
         # Initialise local rod element with necessary parameters
         self.rho = rho
         self.A = A
-        self.ksi = ksi if ksi is not None else 0.01
+        self.ksi = ksi if ksi is not None else 0
         self.E = E * (1+2j*self.ksi)
         self.L = L
         # assisgn ksi if given otherwise assign a default value
