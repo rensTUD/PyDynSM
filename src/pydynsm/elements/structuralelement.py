@@ -256,9 +256,7 @@ class ElementFactory:
         def decorator(element_class):
             # set element class name
             setattr(element_class, 'element_name', name)  # Explicitly set the name attribute
-            # # set required parameters if present
-            # if required_parameters is not None:
-            #     setattr(element_class, 'required_parameters', required_parameters)
+
             # register the element class
             cls.RegisterElement(element_class)   # Register the class using the newly set name
             return element_class

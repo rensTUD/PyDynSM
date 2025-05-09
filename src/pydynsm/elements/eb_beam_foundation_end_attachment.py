@@ -29,12 +29,12 @@ class EulerBernoulliBeamFoundationEndAttachment(StructuralElement):
             kd  : value. Stiffness of viscoelastic foundation [N/m^2]
             cd  : value. Damping of viscoelastic foundation [N/s/m^2]
             ksi : value. Material damping [-], default: none
-            Pm1,Pm2: Point Mass at the left and right end of the beam [kg]
-            J1,J2: Point Mass moment of inertia at the left and right end of the beam [kg*m^2]
-            K1,K2: Point spring stiffness at the left and right end of the beam [N/m]
-            Cd1,Cd2: Point dashpot damping at the left and right end of the beam [N*s/m]
-            Kr1,Kr2: Point rotational spring stiffness at the left and right end of the beam [N*m/rad]
-            Cr1,Cr2: Point rotational dashpot damping at the left and right end of the beam [N*m*s/rad]
+            Pm1,Pm2: Point Mass at the left (1) and right (2) end of the beam [kg]
+            J1,J2: Point Mass moment of inertia at the left (1) and right (2) end of the beam [kg*m^2]
+            K1,K2: Point spring stiffness at the left (1) and right (2) end of the beam [N/m]
+            Cd1,Cd2: Point dashpot damping at the left (1) and right (2) end of the beam [N*s/m]
+            Kr1,Kr2: Point rotational spring stiffness at the left (1) and right (2) end of the beam [N*m/rad]
+            Cr1,Cr2: Point rotational dashpot damping at the left (1) and right (2) end of the beam [N*m*s/rad]
         """
         # define the of dofs the EulerBernoulli beam and initialise
         dofs = ['z','phi_y']
