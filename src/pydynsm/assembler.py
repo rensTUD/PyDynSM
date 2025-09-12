@@ -77,12 +77,12 @@ class Assembler:
         self.ElementFactory.ListElementTypes()
     
 # %% Plotting    
-    def PlotStructure(self, plot_elements=False):
+    def PlotStructure(self, plot_elements=False, show_legend=False):
         
-        self.StructurePlotter.PlotNodes(self.nodes)
+        self.StructurePlotter.PlotNodes(self.nodes, show_legend=show_legend)
         
         if plot_elements:
-            self.StructurePlotter.PlotElements(self.elements)
+            self.StructurePlotter.PlotElements(self.elements, show_legend=show_legend)
             
         self.StructurePlotter.ShowStructure(f'Structure Configuration: {self.name}')
 

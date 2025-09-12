@@ -15,23 +15,37 @@ class StructurePlotter:
         pass
     
     # %% PLOT STRUCTURE GLOBAL
-    def PlotNodes(self, nodes):
+    def PlotNodes(self, nodes, show_legend=False):
         plt.figure(figsize=(10, 6))
         for node in nodes:
             # marker = 'o' if len(node.constrained_dofs) == 0 else '^'
             # color = 'blue' if len(node.constrained_dofs) == 0 else 'red'
             # plt.scatter(node.x, node.z, color=color, marker=marker, label=f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' if f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-            plt.scatter(node.x, node.z, color='red', marker='o', label=f'Node: {node.id}')
+            plt.scatter(node.x, node.z, color='red', marker='o', label=f'Node: {node.id}' if show_legend else None)
             plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
 
-    def PlotElements(self, elements):
+        if show_legend:
+            handles, labels = plt.gca().get_legend_handles_labels()
+            unique = dict(zip(labels, handles))
+            valid_labels = [label for label in unique.keys() if label and not label.startswith("_")]
+            if valid_labels:
+                plt.legend(unique.values(), unique.keys())      
+
+    def PlotElements(self, elements, show_legend=False):
         for element in elements:
             x_values = [element.nodes[0].x, element.nodes[1].x]
             z_values = [element.nodes[0].z, element.nodes[1].z]
-            plt.plot(x_values, z_values, 'k-', linewidth=2, label=f'Element: {element.id}' if 'Element' not in plt.gca().get_legend_handles_labels()[1] else "")
+            plt.plot(x_values, z_values, 'k-', linewidth=2, label=f'Element: {element.id}' if show_legend else None)
             mid_x = sum(x_values) / 2
             mid_z = sum(z_values) / 2
             plt.text(mid_x, mid_z+0.02, element.id, fontsize=9, color='black')
+
+        if show_legend:
+            handles, labels = plt.gca().get_legend_handles_labels()
+            unique = dict(zip(labels, handles))
+            valid_labels = [label for label in unique.keys() if label and not label.startswith("_")]
+            if valid_labels:
+                plt.legend(unique.values(), unique.keys())
     
     # %% PLOT RESULTS GLOBAL
     def PlotDisplacements(self, elements, displacements, scale=1.0):
