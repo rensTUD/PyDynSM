@@ -77,14 +77,19 @@ class Assembler:
         self.ElementFactory.ListElementTypes()
     
 # %% Plotting    
-    def PlotStructure(self, plot_elements=False, show_legend=False):
-        
-        self.StructurePlotter.PlotNodes(self.nodes, show_legend=show_legend)
-        
+    def PlotStructure(self, plot_elements=False, plot_elements_type=False, node_legend=True ):
+
+        self.StructurePlotter.PlotNodes(self.nodes, node_legend=node_legend)
+
         if plot_elements:
-            self.StructurePlotter.PlotElements(self.elements, show_legend=show_legend)
+            self.StructurePlotter.PlotElements(self.elements)
+
+        if plot_elements_type:
+            self.StructurePlotter.PlotElementsType(self.elements)
             
         self.StructurePlotter.ShowStructure(f'Structure Configuration: {self.name}')
+
+    
 
 # %% ANALAYSIS 
 # i.e. Stiffness, Force, Displacements

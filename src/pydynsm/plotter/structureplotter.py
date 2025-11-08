@@ -6,8 +6,11 @@ Created on Mon Mar 18 19:52:53 2024
 """
 
 # import necessary libraries
+from platform import node
 import matplotlib.pyplot as plt
 import numpy as np
+
+from pydynsm import elements
 
 # %% Class definition
 class StructurePlotter:
@@ -15,37 +18,89 @@ class StructurePlotter:
         pass
     
     # %% PLOT STRUCTURE GLOBAL
-    def PlotNodes(self, nodes, show_legend=False):
+    def PlotNodes(self, nodes, node_legend):
+        styles = {
+            "Free node": ("o", "red"),
+            "Fixed": ("s", "green"),
+            "Pinned": ("o", "green"),
+            "Roller (x)": (">", "green"),
+            "Roller (z)": ("^", "green"),
+        }
+
         plt.figure(figsize=(10, 6))
+        labels = []
+
         for node in nodes:
-            # marker = 'o' if len(node.constrained_dofs) == 0 else '^'
-            # color = 'blue' if len(node.constrained_dofs) == 0 else 'red'
-            # plt.scatter(node.x, node.z, color=color, marker=marker, label=f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' if f'{"Free" if len(node.constrained_dofs) == 0 else "Fixed"} Node' not in plt.gca().get_legend_handles_labels()[1] else "")
-            plt.scatter(node.x, node.z, color='red', marker='o', label=f'Node: {node.id}' if show_legend else None)
+            dof_x = getattr(node.dof_container.get_dof('x'), 'value', None)
+            dof_z = getattr(node.dof_container.get_dof('z'), 'value', None)
+            dof_phi_y = getattr(node.dof_container.get_dof('phi_y'), 'value', None)
+
+            if dof_x is None and dof_z is None and dof_phi_y is None:
+                type = "Free node"
+            elif dof_x is not None and dof_z is not None and dof_phi_y is not None:
+                type = "Fixed"
+            elif dof_x is not None and dof_z is not None and dof_phi_y is None:
+                type = "Pinned"
+            elif dof_x is not None and dof_z is None and dof_phi_y is None:
+                type = "Roller (x)"
+            elif dof_x is None and dof_z is not None and dof_phi_y is None:
+                type = "Roller (z)"
+            else:
+                type = "Free node"
+
+            marker, color = styles[type]
+            label = None if (not node_legend or type in labels) else type
+            plt.scatter(node.x, node.z, marker=marker, color=color, label=label)
             plt.text(node.x+0.02, node.z+0.02, f'{node.id}', fontsize=9, ha='right')
 
-        if show_legend:
-            handles, labels = plt.gca().get_legend_handles_labels()
-            unique = dict(zip(labels, handles))
-            valid_labels = [label for label in unique.keys() if label and not label.startswith("_")]
-            if valid_labels:
-                plt.legend(unique.values(), unique.keys())      
+            if label is not None:
+                labels.append(label)
 
-    def PlotElements(self, elements, show_legend=False):
+        if labels:
+            plt.legend()
+
+    def PlotElements(self, elements):
         for element in elements:
             x_values = [element.nodes[0].x, element.nodes[1].x]
             z_values = [element.nodes[0].z, element.nodes[1].z]
-            plt.plot(x_values, z_values, 'k-', linewidth=2, label=f'Element: {element.id}' if show_legend else None)
+            plt.plot(x_values, z_values, 'k-', linewidth=2)
             mid_x = sum(x_values) / 2
             mid_z = sum(z_values) / 2
             plt.text(mid_x, mid_z+0.02, element.id, fontsize=9, color='black')
 
-        if show_legend:
-            handles, labels = plt.gca().get_legend_handles_labels()
-            unique = dict(zip(labels, handles))
-            valid_labels = [label for label in unique.keys() if label and not label.startswith("_")]
-            if valid_labels:
-                plt.legend(unique.values(), unique.keys())
+    def PlotElementsType(self, elements):
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        style_map = {}
+        color_idx = 0
+        labels = []
+
+        for element in elements:
+            element_types = tuple(sorted(element.element_types.keys()))
+            label = " + ".join(element_types)
+
+            if element_types not in style_map:
+                color = colors[color_idx % len(colors)]
+                color_idx += 1
+                linestyle = '-'
+                style_map[element_types] = (color, linestyle, label)
+
+            color, linestyle, label = style_map[element_types]
+
+            x_values = [element.nodes[0].x, element.nodes[1].x]
+            z_values = [element.nodes[0].z, element.nodes[1].z]
+
+            plot_label = None if label in labels else label
+            plt.plot(x_values, z_values, linewidth=2, color=color, linestyle=linestyle, label=plot_label)
+
+            if plot_label is not None:
+                labels.append(plot_label)
+
+            mid_x = 0.5 * (x_values[0] + x_values[1])
+            mid_z = 0.5 * (z_values[0] + z_values[1])
+            plt.text(mid_x, mid_z + 0.02, element.id, fontsize=9, color='black')
+
+        if labels:
+            plt.legend()
     
     # %% PLOT RESULTS GLOBAL
     def PlotDisplacements(self, elements, displacements, scale=1.0):
