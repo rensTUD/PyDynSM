@@ -19,25 +19,34 @@ class Rod1D_foundation(StructuralElement):
 
     element_name = 'Rod over viscoelastic foundation'
 
-    def __init__(self, rho, A, E, L, k, ksi=None):
+    def __init__(self, section, rho, E, L, k, ksi=None):
         """
         Initialise the Rod1D_foundation class.
 
-        Input:
-            rho: value. Density of the element's material [kg/m^3]
-            A:   value. Area of the element [m^2]
-            E:   value. E-modulus of the element's material [Pa]
-            L:   value. Length of element [m]
-            k:   value. Soil stiffness [N/m^2]
-            ksi: value. Damping of the element's material [-]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A)
+        rho : float
+            Density of the element's material [kg/m^3]
+        E : float
+            E-modulus of the element's material [Pa]
+        L : float
+            Length of element [m]
+        k : float
+            Soil stiffness [N/m^2]
+        ksi : float, optional
+            Damping of the element's material [-], default: 0
         """
         # define what dofs the rod contributes to and initialise
         dofs = ['x']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+
         # Initialise local rod element with necessary parameters
         self.rho = rho
-        self.A = A
         self.E = E
         self.L = L
         self.k = k

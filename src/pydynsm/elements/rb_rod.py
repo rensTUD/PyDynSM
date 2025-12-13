@@ -17,30 +17,39 @@ class RayleighBishopRod(StructuralElement):
 
     element_name = 'Rayleigh-Bishop Rod'
 
-    def __init__(self, rho, A, E, Ir, L, nu, G, ksi=None):
+    def __init__(self, section, rho, E, L, nu, G, ksi=None):
         """
         Initialise Rayleigh-Bishop Rod.
 
-        Input:
-            rho: value. Density of the element's material [kg/m^3]
-            A:   value. Area of the element [m^2]
-            E:   value. E-modulus of the element's material [Pa]
-            Ir:  value. Cross-sectional moment of inertia of the element [m^4]
-            L:   value. Length of element [m]
-            nu:  value. Poisson's ratio [-]
-            G:   value. Shear modulus of the element [Pa]
-            ksi: value. Damping of the element's material [-]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y for rotary inertia)
+        rho : float
+            Density of the element's material [kg/m^3]
+        E : float
+            E-modulus of the element's material [Pa]
+        L : float
+            Length of element [m]
+        nu : float
+            Poisson's ratio [-]
+        G : float
+            Shear modulus of the element [Pa]
+        ksi : float, optional
+            Damping of the element's material [-], default: 0.01
         """
         # define what dofs the RB rod contributes to and initialise
         # TODO - WHAT ARE THE DEGREES OF FREEDOM, maybe degree of freedom 4?
         dofs = [0]
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+        self.Ir = section.I_y  # For rotary inertia
+
         # Initialise local rod element with necessary parameters
         self.rho = rho
-        self.A = A
         self.E = E
-        self.Ir = Ir
         self.L = L
         self.nu = nu
         self.G = G

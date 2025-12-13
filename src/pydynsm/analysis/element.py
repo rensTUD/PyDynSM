@@ -3,6 +3,7 @@
 import numpy as np
 from collections import defaultdict
 from ..elements import ElementFactory
+from ..sections import SectionFactory
 from .dofs import DOFContainer, DOF
 
 
@@ -23,6 +24,30 @@ class Element:
         List of nodes connected to this element.
     dofs : dict
         Dictionary of DOFs for each node in the element.
+    section : Section, optional
+        Cross-sectional geometry (set via SetSection())
+    element_types : dict
+        Dictionary of element types added to this element (set via SetElementType())
+    
+    Examples
+    --------
+    New two-step workflow:
+    
+    >>> # Step 1: Set cross-sectional geometry
+    >>> element.SetSection('rectangle', {'width': 0.2, 'height': 0.3})
+    >>> 
+    >>> # Step 2: Set element type with material properties
+    >>> element.SetElementType('EulerBernoulli Beam', E=210e9, rho=7850, ksi=0.01)
+    >>> 
+    >>> # Or with additional element-specific properties:
+    >>> element.SetElementType('EulerBernoulli Beam Foundation', 
+    ...                        E=210e9, rho=7850, ksi=0.01, kd=1e8, cd=0)
+    
+    Available section types:
+    - 'rectangle': requires {'width', 'height'}
+    - 'circle': requires {'diameter'}
+    - 'hollow_circle': requires {'outer_diameter', 'inner_diameter'}
+    - 'i_section': requires {'flange_width', 'flange_thickness', 'web_height', 'web_thickness'}
     """
     
     # initialise number of elements (ne) as class-variable, to be updated by every new class object
@@ -96,6 +121,9 @@ class Element:
         
         # Keep track of what kind of elements are included in the form of a dictionary to be able to use them later
         self.element_types = {}
+        
+        # Store section instance (set via SetSection)
+        self.section = None
         
         # initialise empty list with nodal forces due to element loads
         self.element_loads = defaultdict(dict)
@@ -465,19 +493,80 @@ class Element:
         self.R = np.block([[Y, np.zeros((3,9))], [np.zeros((3,3)), Y, np.zeros((3,6))], [np.zeros((3,6)), Y, np.zeros((3,3))], [np.zeros((3,9)), Y]])
         
 # %% Setting / removing a section        
-    def SetSection(self, element_type, props):
+    def SetSection(self, section_type, props):
         '''
-        This function serves to set the elements, we will have to think how we do this properly but this is an initial set-up
+        Set the cross-sectional geometry for the element.
         
+        This method creates a section instance from the provided section type and dimensions.
+        The section computes geometric properties (A, I_y, I_z, W_y, W_z) from dimensions.
+        Material properties are NOT stored in the section - they are provided separately
+        when calling SetElementType().
+        
+        Parameters
+        ----------
+        section_type : str
+            Type of section (e.g., 'rectangle', 'circle', 'hollow_circle', 'i_section')
+        props : dict
+            Dictionary containing section dimensions (e.g., {'width': 0.2, 'height': 0.3}
+            for rectangle, or {'diameter': 0.1} for circle)
+        
+        Examples
+        --------
+        >>> element.SetSection('rectangle', {'width': 0.2, 'height': 0.3})
+        >>> element.SetSection('circle', {'diameter': 0.1})
+        >>> element.SetSection('hollow_circle', {'outer_diameter': 0.2, 'inner_diameter': 0.15})
+        >>> element.SetSection('i_section', {'flange_width': 0.2, 'flange_thickness': 0.02,
+        ...                                   'web_height': 0.3, 'web_thickness': 0.01})
         '''
-        # TODO - need to handle errors correctly when not the correct parameters are given
+        try:
+            # Create section instance via SectionFactory
+            section = SectionFactory.CreateSection(section_type, **props)
+            
+            # Store section instance
+            self.section = section
+            
+            print(f'Successfully set section of type: {section_type} to Element {self.id}')
+        except Exception as e:
+            print(f'Exception occurred while setting section - {e}')
+            raise
+    
+    def SetElementType(self, element_type, **material_and_element_props):
+        '''
+        Set the element type with material and element-specific properties.
         
-        # add L to props
-        props['L'] = self.L
+        This method creates an element instance using the stored section and provided
+        material properties. The section must be set first using SetSection().
+        
+        Parameters
+        ----------
+        element_type : str
+            Type of element (e.g., 'Rod', 'EulerBernoulli Beam', etc.)
+        **material_and_element_props : dict
+            Material properties (E, rho, ksi, G, nu) and element-specific properties
+            (kd, cd, T, k, etc.) passed as keyword arguments.
+        
+        Examples
+        --------
+        >>> element.SetSection('rectangle', {'width': 0.2, 'height': 0.3})
+        >>> element.SetElementType('EulerBernoulli Beam', E=210e9, rho=7850, ksi=0.01)
+        >>> element.SetElementType('EulerBernoulli Beam Foundation', E=210e9, rho=7850,
+        ...                        ksi=0.01, kd=1e8, cd=0)
+        '''
+        # Check that section is set
+        if self.section is None:
+            raise ValueError("Section must be set first using SetSection() before setting element type.")
         
         try:
-            #  try to load the element from the element factory                
-            element = ElementFactory.CreateElement(element_type, **props)
+            # Create element instance by calling element's __init__ with:
+            # - section=self.section (section object passed directly)
+            # - L=self.L (element length)
+            # - **material_and_element_props (material and element-specific properties)
+            element = ElementFactory.CreateElement(
+                element_type,
+                section=self.section,
+                L=self.L,
+                **material_and_element_props
+            )
             
             # Add local DOFs to each node's local DOFContainer
             for node in self.nodes:
@@ -490,24 +579,46 @@ class Element:
             self.apply_global_constraints_to_local_dofs()
             
             # store the element
-            self.element_types[element_type] = element    
+            self.element_types[element_type] = element
+            
+            print(f'Successfully added element of type: {element_type} to Element {self.id}')
         except Exception as e:
             print(f'Exception occurred - {e}')
-        else:
-            print(f'Successfully added element of type: {element_type} to Element {self.id}')
+            raise
     
-    def RemoveSection(self,element_type):
+    def RemoveSection(self):
         '''
-        Does what it says it does..
+        Remove the stored section and optionally remove associated element types.
         
-        Returns
-        -------
-        
-        '''        
+        This removes the section instance and all element types that depend on it.
+        '''
         try:
-            del self.element_types[element_type]
+            # Remove section
+            self.section = None
+            
+            # Remove all element types (they depend on the section)
+            self.element_types.clear()
+            
+            print(f'Successfully removed section from Element {self.id}')
         except Exception as e:
             print(f'An error has occurred whilst trying to remove a section - {e}')
+    
+    def RemoveElementType(self, element_type):
+        '''
+        Remove a specific element type from the element.
+        
+        Parameters
+        ----------
+        element_type : str
+            Type of element to remove
+        '''
+        try:
+            del self.element_types[element_type]
+            print(f'Successfully removed element type {element_type} from Element {self.id}')
+        except KeyError:
+            print(f'Element type {element_type} not found in Element {self.id}')
+        except Exception as e:
+            print(f'An error has occurred whilst trying to remove element type - {e}')
 
                 
 # %% Prescribing dofs   
