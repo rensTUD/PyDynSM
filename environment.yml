@@ -1,0 +1,16 @@
+name: pydynsm_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - loguru
+  # IDE / notebooks
+  - spyder
+  - ipykernel
+  # PIP stuff
+  - pip 
+        
