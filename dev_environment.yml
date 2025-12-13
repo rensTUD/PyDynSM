@@ -2,27 +2,36 @@ name: pydynsm_dev_env
 channels:
   - conda-forge
   - defaults
+
 dependencies:
   - python=3.11
+
+  # scientific stack
   - numpy
   - scipy
   - matplotlib
   - loguru
+
   # IDE / notebooks
   - spyder
   - ipykernel
-  # PIP stuff
-  - pip 
-  # dev related
-  # packaging / build 
-  - setuptools>=69
-  - wheel
-  - build
-  # testing 
+
+  # testing
   - pytest
+
   # documentation
   - mkdocs
   - mkdocs-material
   - mkdocstrings
   - mkdocstrings-python
-        
+
+  # pip itself
+  - pip
+
+  # pip-installed tools
+  - pip:
+      # packaging / release
+      - setuptools>=69
+      - wheel
+      - build
+      - twine
