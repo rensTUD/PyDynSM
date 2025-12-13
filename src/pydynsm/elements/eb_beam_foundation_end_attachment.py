@@ -16,35 +16,51 @@ class EulerBernoulliBeamFoundationEndAttachment(StructuralElement):
     """Class for Euler-Bernoulli beam element over viscoelastic foundation with end attachments."""
 
 
-    def __init__(self, rho, A, E, Ib, Wb, L, kd=0, cd=0, Pm1=0, Pm2=0, J1=0, J2=0, K1=0, K2=0, Cd1=0, Cd2=0, Kr1=0, Kr2=0, Cr1=0, Cr2=0, ksi=None ):
+    def __init__(self, section, rho, E, L, kd=0, cd=0, Pm1=0, Pm2=0, J1=0, J2=0, K1=0, K2=0, Cd1=0, Cd2=0, Kr1=0, Kr2=0, Cr1=0, Cr2=0, ksi=None ):
         """
         Initialise EB beam over viscoelastic foundation.
 
-        Input:
-            rho : value. Density of element [kg/m^3]
-            A   : value. Area of cross section [m^2]
-            E   : value. Young's modulus [Pa]
-            Ib  : value. Cross-sectional inertia [m^4]
-            L   : value. Length of the element [m]
-            kd  : value. Stiffness of viscoelastic foundation [N/m^2]
-            cd  : value. Damping of viscoelastic foundation [N/s/m^2]
-            ksi : value. Material damping [-], default: none
-            Pm1,Pm2: Point Mass at the left (1) and right (2) end of the beam [kg]
-            J1,J2: Point Mass moment of inertia at the left (1) and right (2) end of the beam [kg*m^2]
-            K1,K2: Point spring stiffness at the left (1) and right (2) end of the beam [N/m]
-            Cd1,Cd2: Point dashpot damping at the left (1) and right (2) end of the beam [N*s/m]
-            Kr1,Kr2: Point rotational spring stiffness at the left (1) and right (2) end of the beam [N*m/rad]
-            Cr1,Cr2: Point rotational dashpot damping at the left (1) and right (2) end of the beam [N*m*s/rad]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y, W_y)
+        rho : float
+            Density of element [kg/m^3]
+        E : float
+            Young's modulus [Pa]
+        L : float
+            Length of the element [m]
+        kd : float, optional
+            Stiffness of viscoelastic foundation [N/m^2], default: 0
+        cd : float, optional
+            Damping of viscoelastic foundation [N/s/m^2], default: 0
+        ksi : float, optional
+            Material damping [-], default: 0
+        Pm1, Pm2 : float, optional
+            Point Mass at the left (1) and right (2) end of the beam [kg], default: 0
+        J1, J2 : float, optional
+            Point Mass moment of inertia at the left (1) and right (2) end of the beam [kg*m^2], default: 0
+        K1, K2 : float, optional
+            Point spring stiffness at the left (1) and right (2) end of the beam [N/m], default: 0
+        Cd1, Cd2 : float, optional
+            Point dashpot damping at the left (1) and right (2) end of the beam [N*s/m], default: 0
+        Kr1, Kr2 : float, optional
+            Point rotational spring stiffness at the left (1) and right (2) end of the beam [N*m/rad], default: 0
+        Cr1, Cr2 : float, optional
+            Point rotational dashpot damping at the left (1) and right (2) end of the beam [N*m*s/rad], default: 0
         """
         # define the of dofs the EulerBernoulli beam and initialise
         dofs = ['z','phi_y']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        # For 2D x-z plane bending: Ib maps to I_y, Wb maps to W_y
+        self.A = section.A
+        self.Ib = section.I_y
+        self.Wb = section.W_y
+
         # Initialise local beam element with necessary parameters
         self.rho = rho
-        self.A = A
-        self.Ib = Ib
-        self.Wb = Wb
         self.L = L
         self.kd = kd
         self.cd = cd

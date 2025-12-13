@@ -19,28 +19,35 @@ class Shear1D(StructuralElement):
 
     element_name = 'Shear Beam'
 
-    def __init__(self, rho, A, G, L, ksi=None):
+    def __init__(self, section, rho, G, L, ksi=None):
         """
-        Initialise a new instance of Rod1D.
+        Initialise a new instance of Shear1D.
 
-        Input:
-            rho: value. Density of the element's material [kg/m^3]
-            A:   value. Area of the element [m^2]
-            G:   value. G-modulus of the element's material [Pa]
-            L:   value. Length of element [m]
-            ksi: value. Damping of the element's material [-]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A)
+        rho : float
+            Density of the element's material [kg/m^3]
+        G : float
+            G-modulus of the element's material [Pa]
+        L : float
+            Length of element [m]
+        ksi : float, optional
+            Damping of the element's material [-], default: 0
         """
         # define what dofs the rod contributes to and initialise
         dofs = ['z']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+
         # Initialise local rod element with necessary parameters
         self.rho = rho
-        self.A = A
         self.ksi = ksi if ksi is not None else 0
         self.G = G * (1+2j*self.ksi)
         self.L = L
-        # assisgn ksi if given otherwise assign a default value
         
         # set q standard to 0
         self.q = np.zeros(len(dofs))

@@ -15,28 +15,35 @@ from .structuralelement import StructuralElement, ElementFactory
 class EulerBernoulliBeam(StructuralElement):
     """Class for Euler-Bernoulli beam element."""
 
-    def __init__(self, rho, A, E, Ib, Wb, L, ksi=None):
+    def __init__(self, section, rho, E, L, ksi=None):
         """
         Initialise EulerBernoulliBeam class.
 
-        Input:
-            rho : value. Density of element [kg/m^3]
-            A   : value. Area of cross section [m^2]
-            E   : value. Young's modulus [Pa]
-            Ib  : value. Cross-sectional inertia [m^4]
-            L   : value. Length of the element [m]
-            ksi : value. Material damping [-], default: none
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y, W_y)
+        rho : float
+            Density of element [kg/m^3]
+        E : float
+            Young's modulus [Pa]
+        L : float
+            Length of the element [m]
+        ksi : float, optional
+            Material damping [-], default: 0
         """
         # define the of dofs the EulerBernoulli beam and initialise
         dofs = ['z','phi_y']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        # For 2D x-z plane bending: Ib maps to I_y, Wb maps to W_y
+        self.A = section.A
+        self.Ib = section.I_y
+        self.Wb = section.W_y
+
         # Initialise local beam element with necessary parameters
         self.rho = rho
-        self.A = A
-        # self.E = E # please see the line below for complex E value
-        self.Ib = Ib
-        self.Wb = Wb
         self.L = L
         # Assign ksi if given,  otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0

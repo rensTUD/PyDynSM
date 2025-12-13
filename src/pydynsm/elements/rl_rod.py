@@ -17,28 +17,36 @@ class RayleighLoveRod(StructuralElement):
 
     element_name = 'Rayleigh-Love Rod'
 
-    def __init__(self, rho, A, E, Ir, L, nu, ksi=None):
+    def __init__(self, section, rho, E, L, nu, ksi=None):
         """
         Initialise the Rayleigh-Love Rod class.
 
-        Input:
-            rho: value. Density of the element's material [kg/m^3]
-            A:   value. Area of the element [m^2]
-            E:   value. E-modulus of the element's material [Pa]
-            Ir:  value. Cross-sectional moment of inertia of the element [m^4]
-            L:   value. Length of element [m]
-            nu:  value. Poisson's ratio [-]
-            ksi: value. Damping of the element's material [-]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y for rotary inertia)
+        rho : float
+            Density of the element's material [kg/m^3]
+        E : float
+            E-modulus of the element's material [Pa]
+        L : float
+            Length of element [m]
+        nu : float
+            Poisson's ratio [-]
+        ksi : float, optional
+            Damping of the element's material [-], default: 0.01
         """
         # define what dofs the RL rod contributes to and initialise
         dofs = ['x']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+        self.Ir = section.I_y  # For rotary inertia
+
         # Initialise local rod element with necessary parameters
         self.rho = rho
-        self.A = A
         self.E = E
-        self.Ir = Ir
         self.L = L
         self.nu = nu
         # assisgn ksi if given otherwise assign a default value

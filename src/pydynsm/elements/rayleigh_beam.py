@@ -17,28 +17,35 @@ class RayleighBeam(StructuralElement):
 
     element_name = 'Rayleigh Beam'
 
-    def __init__(self, rho, A, E, Ib, L, ksi=None):
+    def __init__(self, section, rho, E, L, ksi=None):
         """
         Initialise RayleighBeam class.
 
-        Input:
-            rho: value. Density of the element's material [kg/m^3]
-            A:   value. Area of the element [m^2]
-            E:   value. E-modulus of the element's material [Pa]
-            Ib:  value. Cross-sectional moment of inertia of the element [m^4]
-            L:   value. Length of element [m]
-            ksi: value. Damping of the element's material [-]
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y)
+        rho : float
+            Density of the element's material [kg/m^3]
+        E : float
+            E-modulus of the element's material [Pa]
+        L : float
+            Length of element [m]
+        ksi : float, optional
+            Damping of the element's material [-], default: 0.01
         """
         # define what dofs the rayleigh beam contributes to and initialise
         # the dofs are w and phi, so 1 and 2
         dofs = ['z','phi_y']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+        self.Ib = section.I_y  # For 2D x-z plane bending
+
         # Initialise local beam element with necessary parameters
         self.rho = rho
-        self.A = A
         self.E = E
-        self.Ib = Ib
         self.L = L
         # assisgn ksi if given otherwise assign a default value
         self.ksi = ksi if ksi is not None else 0.01

@@ -17,28 +17,36 @@ class TensionedEulerBernoulliBeam(StructuralElement):
 
     element_name = 'Tensioned EulerBernoulli Beam'
 
-    def __init__(self, rho, A, E, Ib, L, T, ksi=None):
+    def __init__(self, section, rho, E, L, T, ksi=None):
         """
         Initialise TensionedEulerBernoulliBeam class.
 
-        Input:
-            rho : value. Density of element [kg/m^3]
-            A   : value. Area of cross section [m^2]
-            E   : value. Young's modulus [Pa]
-            Ib  : value. Cross-sectional inertia [m^4]
-            L   : value. Length of the element [m]
-            T   : value. Tension applied to beam [N]
-            ksi : value. Material damping [-], default: none
+        Parameters
+        ----------
+        section : Section
+            Section object providing geometric properties (A, I_y)
+        rho : float
+            Density of element [kg/m^3]
+        E : float
+            Young's modulus [Pa]
+        L : float
+            Length of the element [m]
+        T : float
+            Tension applied to beam [N]
+        ksi : float, optional
+            Material damping [-], default: 0
         """
         # define what dofs the eb beam contributes to and initialise
         dofs = ['z','phi_y']
         super().__init__(dofs)
 
+        # Extract geometric properties from section
+        self.A = section.A
+        self.Ib = section.I_y  # For 2D x-z plane bending
+
         # Initialise local beam element with necessary parameters
         self.rho = rho
-        self.A = A
         self.E = E
-        self.Ib = Ib
         self.L = L
         self.T = T
         # assisgn ksi if given otherwise assign a default value

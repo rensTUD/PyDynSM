@@ -26,12 +26,23 @@ Es = 210e9  # Elasticity modulus steel
 Ec = 3.1e10  # Elasticity modulus concrete
 rhoc = 2500  # density concrete
 rhos = 7800  # density steel
-Ab = 2  # beam cross sectional area
-Ib = 0.00395  # beam 2nd mmt of intertial
-rc = 9.5 * 0.001
-Ac = np.pi * rc**2
-Ic = 0.25 * np.pi * rc**4
 omega_f = 100
+
+# %% Section properties
+# First element (Rod and Shear Beam): rectangular section (thicker)
+rect1_width = 0.1   # m (100 mm)
+rect1_height = 0.05  # m (50 mm)
+
+# Third element (Rod): rectangular section (thin)
+rect3_width = 0.1   # m (100 mm)
+rect3_height = 0.02  # m (20 mm)
+
+# Second element (EB Beam with foundation): I-section
+i_section_total_height = 0.2      # m (200 mm)
+i_section_flange_thickness = 0.0085  # m (8.5 mm)
+i_section_web_thickness = 0.0056    # m (5.6 mm)
+i_section_flange_width = 0.1        # m (100 mm)
+i_section_web_height = i_section_total_height - 2 * i_section_flange_thickness  # m
 
 # %% Create Nodes
 '''
@@ -136,23 +147,43 @@ There are various sections available. In this example we will use:
     Euler bernoulli beam on foundation
     Rod
 
-To assign sections, we use the element.SetSection(element_type, parameters), where:
-    element_type: string with the element type:
-                                        - 'EulerBernoulli Beam'
-                                        - 'EulerBernoulli Beam with foundation'
-                                        - 'Rod'
+Assigning sections is a two-step process:
+    1. First, define the cross-sectional geometry (the geometric shape) using 
+       element.SetSection(section_type, dimensions)
+    2. Then, set the element type with the necessary material parameters using 
+       element.SetElementType(element_type, **props)
+
+Available section types:
+    - 'rectangle': requires {'width', 'height'}
+    - 'circle': requires {'diameter'}
+    - 'hollow_circle': requires {'outer_diameter', 'inner_diameter'}
+    - 'i_section': requires {'flange_width', 'flange_thickness', 'web_height', 'web_thickness'}
+
+Available element types:
+    - 'Rod'
+    - 'EulerBernoulli Beam'
+    - 'EulerBernoulli Beam with foundation'
+    - 'Shear Beam'
+    - etc.
 
 '''
-# set first element to EB - rod
-# beams[0].SetSection('EulerBernoulli Beam', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib})
-beams[0].SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
-beams[0].SetSection('Shear Beam', {'G': Ec, 'A': Ac, 'rho': rhoc})
+# set first element: Rod and Shear Beam (both use thicker rectangular section)
+beams[0].SetSection('rectangle', {'width': rect1_width, 'height': rect1_height})
+beams[0].SetElementType('Rod', E=Ec, rho=rhoc)
+beams[0].SetElementType('Shear Beam', G=Ec, rho=rhoc)
 
-# set second element to EB
-beams[1].SetSection('EulerBernoulli Beam with foundation', {'E': Ec, 'A': Ab, 'rho': rhoc, 'Ib': Ib, 'Wb': Ib, 'kd': 1e8, 'cd': 0})
+# set second element: EulerBernoulli Beam with foundation (I-section)
+beams[1].SetSection('i_section', {
+    'flange_width': i_section_flange_width,
+    'flange_thickness': i_section_flange_thickness,
+    'web_height': i_section_web_height,
+    'web_thickness': i_section_web_thickness
+})
+beams[1].SetElementType('EulerBernoulli Beam with foundation', E=Ec, rho=rhoc, kd=1e8, cd=0)
 
-# set third element to rod
-beams[2].SetSection('Rod', {'E': Ec, 'A': Ac, 'rho': rhoc})
+# set third element: Rod (thin rectangular section)
+beams[2].SetSection('rectangle', {'width': rect3_width, 'height': rect3_height})
+beams[2].SetElementType('Rod', E=Ec, rho=rhoc)
 
 
 # %% loading definition
@@ -238,34 +269,6 @@ def get_unique_dof_indices_of_node(node_id, pydynsm_object):
                             node_unique_dof_indices[dof_name] = new_index
 
     return node_unique_dof_indices
-
-# def filter_free_dofs_for_node(node_dofs, pydynsm_object):
-#     """
-#     Filters the DOFs of a node to determine which are actually free.
-
-#     Parameters
-#     ----------
-#     node_dofs : dict
-#         Dictionary mapping DOF names (e.g., 'x', 'z', 'phi_y') to their unique DOF indices.
-#     free_dofs : numpy.ndarray
-#         Array of global unique DOF indices that are free.
-
-#     Returns
-#     -------
-#     node_free_dofs : dict
-#         Dictionary mapping DOF names to unique indices for DOFs that are free.
-#         DOFs not in free_dofs are excluded from the result.
-#     """
-#     free_dofs = pydynsm_object.Analysis.free_dofs
-#     free_dof_set = set(free_dofs)
-#     node_free_dofs = {}
-
-#     for dof_name, index in node_dofs.items():
-#         if index in free_dof_set:
-#             node_free_dofs[dof_name] = index
-#         # Optionally: include `else: node_free_dofs[dof_name] = None` if you want to return something for missing ones
-
-#     return node_free_dofs
 
 def get_free_dof_position_for_node(node_dofs, pydynsm_object):
     """
