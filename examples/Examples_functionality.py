@@ -126,14 +126,14 @@ whilst still having the dof 'phi_y'. In order to avoid a singular matrix, we hav
 to constrain this dof as well. Think why!                                                                  
 
 '''
-node0.fix_node('x','z')
+node0.fix_node('x','z', 'phi_y')
 node1.fix_node('phi_y')
 node2.fix_node('z')
 node3.fix_node('x','z')
 
 
-beams[0].decouple_dof(node1, 'phi_y')
-beams[0].free_dof(node1,'phi_y')
+# beams[0].decouple_dof(node1, 'phi_y')
+# beams[0].free_dof(node1,'phi_y')
 beams[1].decouple_dof(node1, 'phi_y')
 beams[1].free_dof(node1,'phi_y')
 
@@ -205,7 +205,7 @@ Where the exact same logic applies regarding the forcing functions.
 '''
 
 # define a lambda function running over omega for p_z, which return 1e6 if omega = omega_p
-omega_p = 50
+omega_p = 100
 p_z = lambda omega: 1e6 if omega == omega_p else 0
 
 # add a load directly to node1
@@ -451,7 +451,7 @@ We can do the same for stresses:
 u_elem = s1.FullDisplacement(u_free)
 displacements = s1.ElementDisplacements(u_elem, omega_f, num_points=100)
 local_displacements = s1.ElementDisplacements(u_elem, omega_f, local_axes=True)
-s1.PlotElementDisplacements(displacements, scale=1e05)
+s1.PlotElementDisplacements(displacements, scale=10)
 
 # # plot GLOBAL forces
 # forces = s1.ElementForces(u_elem, omega_f, num_points=200)
