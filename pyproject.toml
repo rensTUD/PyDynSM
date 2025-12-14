@@ -7,7 +7,7 @@ name = "PyDynSM"
 version = "0.2.6"
 description = "A Dynamic Stiffness Matrix method solver."
 readme = "README.md"
-requires-python = ">=3.110"
+requires-python = ">=3.11"
 
 authors = [
   { name = "Technical University Delft", email = "r.j.vanleijden-1@tudelft.nl" }

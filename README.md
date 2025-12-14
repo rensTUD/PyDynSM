@@ -16,14 +16,6 @@ conda env create -f environment.yml
 conda activate pydynsm_env
 ```
 
-This installs:
-
-* Python 3.11
-* NumPy
-* SciPy
-* Matplotlib
-* pip
-
 ### 2. Install PyDynSM
 
 Install the package using `pip`:
@@ -41,12 +33,11 @@ This section is for contributors and developers working on PyDynSM.
 The development environment includes additional tooling for building, testing, and maintaining the package.
 
 ```bash
-conda env create -f environment_dev.yml
+conda env create -f dev_environment.yml
 conda activate pydynsm_dev_env
 ```
 
 ### 2. Install PyDynSM in editable mode
-
 
 
 ```bash
