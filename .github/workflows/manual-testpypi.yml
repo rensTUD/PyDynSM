@@ -1,0 +1,53 @@
+name: Manual Publish to TestPyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (tag/branch/SHA). Example: v0.3.0rc1"
+        required: true
+        default: "master"
+      publish:
+        description: "Actually publish to TestPyPI? (true/false)"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # Required for Trusted Publishing (OIDC)
+      contents: read
+
+    environment:
+      name: testpypi
+      # Optional:
+      # url: https://test.pypi.org/project/YOURPROJECT/
+
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build distributions
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Publish to TestPyPI
+        if: ${{ inputs.publish == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          repository-url: https://test.pypi.org/legacy/
