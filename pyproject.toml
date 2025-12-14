@@ -1,38 +1,35 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyDynSM"  
-version = "0.2.6"  
-authors = [
-  { name = "Technical University Delft", email="r.j.vanleijden-1@tudelft.nl" }
-]
+name = "PyDynSM"
+version = "0.3.0rc3"
 description = "A Dynamic Stiffness Matrix method solver."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+
+authors = [
+  { name = "Technical University Delft", email = "r.j.vanleijden-1@tudelft.nl" }
+]
+
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-license = { file = "LICENSE" }  # Correct way to specify a license file
-
-# Automatically detected dependencies (use pipreqs in root folder of release: 'pipreqs src/pydynsm --print')
-dependencies = [
-  "numpy>=1.21",
-  "matplotlib>=3.4",
-  "scipy>=1.7"
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
-#[project.urls]
-#Homepage = "https://github.com/yourusername/my_package"
-#Issues = "https://github.com/yourusername/my_package/issues"
+license = { file = "LICENSE" }
+
+# Optional: 
+# [project.urls]
+# Homepage = "https://github.com/yourusername/pydynsm"
+# Issues = "https://github.com/yourusername/pydynsm/issues"
 
 [tool.setuptools]
-package-dir = {"" = "src"}  # Uses the "src" layout
-include-package-data = true  # Ensures MANIFEST.in is used
-license-files = [] # temporary fix for setuptools throwing error with license
+# We use a src-layout
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-where = ["src"]  # Finds packages inside "src/"
+# Auto-discover packages under src/
+where = ["src"]
